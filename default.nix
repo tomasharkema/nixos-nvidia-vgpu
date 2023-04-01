@@ -95,6 +95,7 @@ in
 
       postUnpack = postUnpack + ''
         # More merging, besides patch above
+        echo "HELP ME!"
         cp -r ${nvidia-vgpu-kvm-src}/init-scripts .
         cp ${nvidia-vgpu-kvm-src}/kernel/common/inc/nv-vgpu-vfio-interface.h kernel/common/inc//nv-vgpu-vfio-interface.h
         cp ${nvidia-vgpu-kvm-src}/kernel/nvidia/nv-vgpu-vfio-interface.c kernel/nvidia/nv-vgpu-vfio-interface.c
