@@ -151,10 +151,21 @@ in
       name = "nvidia-x11-${vgpuVersion}-${gridVersion}-${config.boot.kernelPackages.kernel.version}";
       version = "${vgpuVersion}";
 
-      src = 
-        if cfg.gridDriver != null then
-          cfg.gridDriver
-        else throw "No 'gridDriver' option provided with path to driver";
+      # https://github.com/NixOS/nix/issues/1528
+      src = let
+        srcPath = 
+          if cfg.vgpuKvmDriver != null then
+            cfg.vgpuKvmDriver
+          else
+            throw "No 'gridDriver' option provided with path to driver";
+
+        derivationName = baseNameOf srcPath;
+        storePath = "/nix/store/zzy4bnrd0zzwsjalhbpvsgzqz43n5xic-${derivationName}"; # this should be ${storeHash}
+      in
+        if builtins.pathExists storePath then
+                storePath 
+              else
+                srcPath;
 
       #src = pkgs.requireFile {
       #  name = "NVIDIA-Linux-x86_64-${gridVersion}-grid.run";
