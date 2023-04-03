@@ -1,4 +1,4 @@
-{ pkgs, lib, config, ... }:
+{ pkgs, lib, config, types, ... }:
 
 let
   cfg = config.hardware.nvidia.vgpu;
@@ -12,6 +12,7 @@ let
   guestVersion = "461.33";
 
   combinedZipName = "NVIDIA-GRID-Linux-KVM-${vgpuVersion}-${gridVersion}-${guestVersion}.zip";
+  
   requireFile = { name, ... }@args: pkgs.requireFile (rec {
     inherit name;
     url = "https://www.nvidia.com/object/vGPU-software-driver.html";
@@ -26,11 +27,65 @@ let
     '';
   } // args);
 
-  nvidia-vgpu-kvm-src = pkgs.runCommand "nvidia-${vgpuVersion}-vgpu-kvm-src" {
-    src = requireFile {
-      name = "NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm.run";
-      sha256 = "00ay1f434dbls6p0kaawzc6ziwlp9dnkg114ipg9xx8xi4360zzl";
-    };
+  nvidia-vgpu-kvm-src = 
+  pkgs.runCommand "nvidia-${vgpuVersion}-vgpu-kvm-src" {
+    
+    # https://github.com/NixOS/nix/issues/1528
+    src = let
+      srcPath = 
+        if cfg.vgpuKvmDriver != null then
+          cfg.vgpuKvmDriver
+        else
+          throw "No 'vgpuKvmDriver' option provided with path to driver";
+
+      derivationName = baseNameOf srcPath;
+      storePath = "/nix/store/zzy4bnrd0zzwha1lhbpvsgzqz43n5xic-${derivationName}"; # this should be ${storeHash}
+    in
+      if builtins.pathExists storePath then
+              storePath 
+            else
+              srcPath;
+              
+    # The user might need to do this: https://discourse.nixos.org/t/can-i-use-flakes-within-a-git-repo-without-committing-flake-nix/18196/5
+/*
+    src = let
+      storePath = let
+        srcPath = 
+        if cfg.vgpuKvmDriver != null then
+          cfg.vgpuKvmDriver
+        else
+          throw "No 'vgpuKvmDriver' option provided with path to driver";
+      in
+        builtins.storePath srcPath;
+    in
+      storePath;
+      */
+
+    /*
+    
+    src = let
+      srcPath = 
+        if cfg.vgpuKvmDriver != null then
+          cfg.vgpuKvmDriver
+        else
+          throw "No 'vgpuKvmDriver' option provided with path to driver";
+    in srcPath; 
+    */
+
+
+    #src = lib.fetchurl {
+    #  url = "file://${srcss}";
+    #  sha256 = "";
+    #};
+
+#    src = if cfg.vgpuKvmDriver != null then
+#            cfg.vgpuKvmDriver
+#          else throw "No 'vgpuKvmDriver' option provided with path to driver";
+    
+    #requireFile {
+    #  name = "NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm.run";
+    #  sha256 = "00ay1f434dbls6p0kaawzc6ziwlp9dnkg114ipg9xx8xi4360zzl";
+    #};
   } ''
     mkdir $out
     cd $out
@@ -60,8 +115,11 @@ let
 
     installPhase = "install -Dm755 vgpu_unlock $out/bin/vgpu_unlock";
   };
+
 in
 {
+
+  
   options = {
     hardware.nvidia.vgpu = {
       enable = lib.mkEnableOption "vGPU support";
@@ -71,19 +129,38 @@ in
         type = lib.types.bool;
         description = "Unlock vGPU functionality for consumer grade GPUs";
       };
+      vgpuKvmDriver = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = lib.mdDoc "NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm.run";
+      };
+
+      gridDriver = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = lib.mdDoc "NVIDIA-Linux-x86_64-${gridVersion}-grid.run";
+      };
     };
   };
 
   config = lib.mkIf cfg.enable {
     hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable.overrideAttrs (
       { patches ? [], postUnpack ? "", postPatch ? "", preFixup ? "", ... }@attrs: {
+        # Overriding https://github.com/NixOS/nixpkgs/tree/nixos-unstable/pkgs/os-specific/linux/nvidia-x11
+        # that gets called from the option hardware.nvidia.package from here: https://github.com/NixOS/nixpkgs/blob/nixos-22.11/nixos/modules/hardware/video/nvidia.nix
       name = "nvidia-x11-${vgpuVersion}-${gridVersion}-${config.boot.kernelPackages.kernel.version}";
       version = "${vgpuVersion}";
 
-      src = requireFile {
-        name = "NVIDIA-Linux-x86_64-${gridVersion}-grid.run";
-        sha256 = "0smvmxalxv7v12m0hvd5nx16jmcc7018s8kac3ycmxam8l0k9mw9";
-      };
+      src = 
+        if cfg.gridDriver != null then
+          cfg.gridDriver
+        else throw "No 'gridDriver' option provided with path to driver";
+
+      #src = pkgs.requireFile {
+      #  name = "NVIDIA-Linux-x86_64-${gridVersion}-grid.run";
+      #  path = "${config.gridDriver}";
+        #sha256 = "0smvmxalxv7v12m0hvd5nx16jmcc7018s8kac3ycmxam8l0k9mw9";
+      #};
 
       patches = patches ++ [
         ./nvidia-vgpu-merge.patch
