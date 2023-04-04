@@ -7,7 +7,7 @@ let
   pythonPackages = pkgs.python38Packages;
   frida = pythonPackages.callPackage ./frida {};
 
-  vgpuVersion = "460.32.04";
+  vgpuVersion = "460.73.01";
   gridVersion = "460.32.03";
   guestVersion = "461.33";
 
@@ -113,7 +113,7 @@ in
       version = "${vgpuVersion}";
 
       # https://github.com/NixOS/nix/issues/1528
-      src = let
+      src = let 
         srcPath = 
           if cfg.vgpuKvmDriver != null then
             cfg.vgpuKvmDriver
@@ -152,8 +152,9 @@ in
         #mv -f ./NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm/* ./
         #rm -r ./NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm
 
-        ls
-        cd ./NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm/
+        #ls
+        #cd ./NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm/
+        cd $(find . -maxdepth 1 -type d -iname "*NVIDIA*" -print -quit) # cd into directory with word NVIDIA in it
 
         cp -r ${nvidia-vgpu-kvm-src}/init-scripts .
         cp ${nvidia-vgpu-kvm-src}/kernel/common/inc/nv-vgpu-vfio-interface.h kernel/common/inc//nv-vgpu-vfio-interface.h
@@ -161,8 +162,16 @@ in
         echo "NVIDIA_SOURCES += nvidia/nv-vgpu-vfio-interface.c" >> kernel/nvidia/nvidia-sources.Kbuild
         cp -r ${nvidia-vgpu-kvm-src}/kernel/nvidia-vgpu-vfio kernel/nvidia-vgpu-vfio
 
-        for i in libnvidia-vgpu.so.${vgpuVersion} libnvidia-vgxcfg.so.${vgpuVersion} nvidia-vgpu-mgr nvidia-vgpud vgpuConfig.xml sriov-manage; do
+        echo 1
+
+        for i in $(find . -maxdepth 1 \( -name "libnvidia-vgpu.so.*" -o -name "libnvidia-vgxcfg.so.*" -o -name "nvidia-vgpu-mgr" -o -name "nvidia-vgpud" -o -name "vgpuConfig.xml" -o -name "sriov-manage" \)); do
+
+          #${pkgs.tree}/bin/tree
+          echo $i
+          pwd
+
           cp ${nvidia-vgpu-kvm-src}/$i $i
+          echo 3
         done
 
         chmod -R u+rw .
@@ -181,10 +190,14 @@ in
 
       # HACK: Using preFixup instead of postInstall since nvidia-x11 builder.sh doesn't support hooks
       preFixup = preFixup + ''
-        for i in libnvidia-vgpu.so.${vgpuVersion} libnvidia-vgxcfg.so.${vgpuVersion}; do
+        for i in $(find . -maxdepth 1 \( -name "libnvidia-vgpu.so.*" -o -name "libnvidia-vgxcfg.so.*"\)); do
           install -Dm755 "$i" "$out/lib/$i"
         done
-        patchelf --set-rpath ${pkgs.stdenv.cc.cc.lib}/lib $out/lib/libnvidia-vgpu.so.${vgpuVersion}
+
+        for file in $(find . -maxdepth 1 \( -name "libnvidia-vgpu.so.*" \)); do
+          patchelf --set-rpath ${pkgs.stdenv.cc.cc.lib}/lib $file
+        done
+        
         install -Dm644 vgpuConfig.xml $out/vgpuConfig.xml
 
         for i in nvidia-vgpud nvidia-vgpu-mgr; do
@@ -196,6 +209,8 @@ in
         install -Dm755 sriov-manage $bin/bin/sriov-manage
       '';
 
+    #firmware = null;
+
       installPhase = ''
     # Install libGL and friends.
 
@@ -203,12 +218,12 @@ in
 
     bash
     echo $SHELL
+    ${pkgs.tree}/bin/tree
 
 
     # since version 391, 32bit libraries are bundled in the 32/ sub-directory
     if [ "$i686bundled" = "1" ]; then
         echo 1
-        ${pkgs.tree}/bin/tree
         mkdir -p "$lib32/lib"
         cp -prd 32/*.so.* "$lib32/lib/"
         if [ -d 32/tls ]; then
@@ -225,21 +240,21 @@ in
 
     echo 3
     # Install systemd power management executables
-    if [ -e systemd/nvidia-sleep.sh ]; then
-        mv systemd/nvidia-sleep.sh ./
-    fi
-    if [ -e nvidia-sleep.sh ]; then
-        sed -E 's#(PATH=).*#\1"$PATH"#' nvidia-sleep.sh > nvidia-sleep.sh.fixed
-        install -Dm755 nvidia-sleep.sh.fixed $out/bin/nvidia-sleep.sh
-    fi
+    #if [ -e systemd/nvidia-sleep.sh ]; then
+    #    mv systemd/nvidia-sleep.sh ./
+    #fi
+    #if [ -e nvidia-sleep.sh ]; then
+    #    sed -E 's#(PATH=).*#\1"$PATH"#' nvidia-sleep.sh > nvidia-sleep.sh.fixed
+    #    install -Dm755 nvidia-sleep.sh.fixed $out/bin/nvidia-sleep.sh
+    #fi
 
-    if [ -e systemd/system-sleep/nvidia ]; then
-        mv systemd/system-sleep/nvidia ./
-    fi
-    if [ -e nvidia ]; then
-        sed -E "s#/usr(/bin/nvidia-sleep.sh)#$out\\1#" nvidia > nvidia.fixed
-        install -Dm755 nvidia.fixed $out/lib/systemd/system-sleep/nvidia
-    fi
+    #if [ -e systemd/system-sleep/nvidia ]; then
+    #    mv systemd/system-sleep/nvidia ./
+    #fi
+    #if [ -e nvidia ]; then
+    #    sed -E "s#/usr(/bin/nvidia-sleep.sh)#$out\\1#" nvidia > nvidia.fixed
+    #    install -Dm755 nvidia.fixed $out/lib/systemd/system-sleep/nvidia
+    #fi
 
     for i in $lib32 $out; do
         rm -f $i/lib/lib{glx,nvidia-wfb}.so.* # handled separately
@@ -257,9 +272,13 @@ in
         # Install ICDs, make absolute paths.
         # Be careful not to modify any original files because this runs twice.
 
+        echo 3
+
         # OpenCL
         sed -E "s#(libnvidia-opencl)#$i/lib/\\1#" nvidia.icd > nvidia.icd.fixed
         install -Dm644 nvidia.icd.fixed $i/etc/OpenCL/vendors/nvidia.icd
+
+        echo 4
 
         # Vulkan
         if [ -e nvidia_icd.json.template ] || [ -e nvidia_icd.json ]; then
@@ -270,6 +289,8 @@ in
                 sed -E "s#(libGLX_nvidia)#$i/lib/\\1#" nvidia_icd.json > nvidia_icd.json.fixed
             fi
 
+            echo 5
+
             # nvidia currently only supports x86_64 and i686
             if [ "$i" == "$lib32" ]; then
                 install -Dm644 nvidia_icd.json.fixed $i/share/vulkan/icd.d/nvidia_icd.i686.json
@@ -277,6 +298,8 @@ in
                 install -Dm644 nvidia_icd.json.fixed $i/share/vulkan/icd.d/nvidia_icd.x86_64.json
             fi
         fi
+
+        echo 6
 
         if [ -e nvidia_layers.json ]; then
             sed -E "s#(libGLX_nvidia)#$i/lib/\\1#" nvidia_layers.json > nvidia_layers.json.fixed
@@ -288,8 +311,12 @@ in
             sed -E "s#(libEGL_nvidia)#$i/lib/\\1#" 10_nvidia.json > 10_nvidia.json.fixed
             sed -E "s#(libnvidia-egl-wayland)#$i/lib/\\1#" 10_nvidia_wayland.json > 10_nvidia_wayland.json.fixed
 
+            echo 7
+
             install -Dm644 10_nvidia.json.fixed $i/share/glvnd/egl_vendor.d/10_nvidia.json
             install -Dm644 10_nvidia_wayland.json.fixed $i/share/egl/egl_external_platform.d/10_nvidia_wayland.json
+
+            echo 8
 
             if [[ -f "15_nvidia_gbm.json" ]]; then
               sed -E "s#(libnvidia-egl-gbm)#$i/lib/\\1#" 15_nvidia_gbm.json > 15_nvidia_gbm.json.fixed
@@ -299,6 +326,8 @@ in
               ln -s $i/lib/libnvidia-allocator.so $i/lib/gbm/nvidia-drm_gbm.so
             fi
         fi
+
+        echo 9
 
         # Install libraries needed by Proton to support DLSS
         if [ -e nvngx.dll ] && [ -e _nvngx.dll ]; then
@@ -317,6 +346,8 @@ in
         mkdir -p $bin/lib/xorg/modules/extensions
         cp -p libglx*.so* $bin/lib/xorg/modules/extensions
 
+        echo 10
+
         # Install the kernel module.
         mkdir -p $bin/lib/modules/$kernelVersion/misc
         for i in $(find ./kernel -name '*.ko'); do
@@ -332,10 +363,16 @@ in
         fi
     fi
 
-    if [ -n "$firmware" ]; then
-        # Install the GSP firmware
-        install -Dm644 -t $firmware/lib/firmware/nvidia/$version firmware/gsp*.bin
-    fi
+    echo 11
+
+    echo $firmware/lib/firmware/nvidia/
+    echo $version
+    #ls $firmware/lib/firmware/nvidia/
+
+    #if [ -n "$firmware" ]; then
+    #    # Install the GSP firmware
+    #    install -Dm644 -t $firmware/lib/firmware/nvidia/$version firmware/gsp*.bin
+    #fi
 
     # All libs except GUI-only are installed now, so fixup them.
     for libname in $(find "$out/lib/" $(test -n "$lib32" && echo "$lib32/lib/") $(test -n "$bin" && echo "$bin/lib/") -name '*.so.*')
@@ -365,11 +402,15 @@ in
       fi
     done
 
+    echo 12
+
     if [ -n "$bin" ]; then
         # Install /share files.
         mkdir -p $bin/share/man/man1
         cp -p *.1.gz $bin/share/man/man1
         rm -f $bin/share/man/man1/{nvidia-xconfig,nvidia-settings,nvidia-persistenced}.1.gz
+
+        echo 13
 
         # Install the programs.
         for i in nvidia-cuda-mps-control nvidia-cuda-mps-server nvidia-smi nvidia-debugdump; do
@@ -384,6 +425,8 @@ in
         # FIXME: needs PATH and other fixes
         # install -Dm755 nvidia-bug-report.sh $bin/bin/nvidia-bug-report.sh
     fi  
+
+    echo 14
 '';
 
     });
