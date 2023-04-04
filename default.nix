@@ -152,6 +152,7 @@ in
         #mv -f ./NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm/* ./
         #rm -r ./NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm
 
+        ls
         cd ./NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm/
 
         cp -r ${nvidia-vgpu-kvm-src}/init-scripts .
@@ -205,15 +206,15 @@ in
 
 
     # since version 391, 32bit libraries are bundled in the 32/ sub-directory
-    #if [ "$i686bundled" = "1" ]; then
-    #    echo 1
-    #    ${pkgs.tree}/bin/tree
-    #    mkdir -p "$lib32/lib"
-    #    cp -prd 32/*.so.* "$lib32/lib/"
-    #    if [ -d 32/tls ]; then
-    #        cp -prd 32/tls "$lib32/lib/"
-    #    fi
-    #fi
+    if [ "$i686bundled" = "1" ]; then
+        echo 1
+        ${pkgs.tree}/bin/tree
+        mkdir -p "$lib32/lib"
+        cp -prd 32/*.so.* "$lib32/lib/"
+        if [ -d 32/tls ]; then
+            cp -prd 32/tls "$lib32/lib/"
+        fi
+    fi
 
     echo 2
     mkdir -p "$out/lib"
