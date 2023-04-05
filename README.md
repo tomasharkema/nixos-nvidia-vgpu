@@ -13,8 +13,6 @@ Example usage:
     vgpu = {
       enable = true; # Enable NVIDIA KVM vGPU + GRID driver
       unlock.enable = true; # Unlock vGPU functionality on consumer cards using DualCoder/vgpu_unlock project.
-      gridDriver = /mnt/DataDisk/drivers/NVIDIA-Linux-x86_64-460.32.03-grid.run;
-      vgpuKvmDriver = /mnt/DataDisk/drivers/NVIDIA-Linux-x86_64-460.73.01-grid-vgpu-kvm-v5.run;
     };
   };
 }
