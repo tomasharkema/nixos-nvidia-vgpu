@@ -1,4 +1,6 @@
-{ pkgs, lib, config, types, ... }:
+{ pkgs ? import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/5bba55eb6e1c627dc1821c9132c5854e0870e2f1.tar.gz"){}, lib, config, types, ... }:
+
+#hardware-pinned ? import (fetchTarball "https://github.com/NixOS/nixos-hardware/archive/7da029f26849f8696ac49652312c9171bf9eb170.tar.gz"){}
 
 let
   cfg = config.hardware.nvidia.vgpu;
@@ -90,6 +92,7 @@ in
         type = lib.types.bool;
         description = "Unlock vGPU functionality for consumer grade GPUs";
       };
+      /*
       vgpuKvmDriver = lib.mkOption {
         type = lib.types.nullOr lib.types.path;
         default = null;
@@ -101,10 +104,44 @@ in
         default = null;
         description = lib.mdDoc "NVIDIA-Linux-x86_64-${gridVersion}-grid.run";
       };
+      */
     };
   };
 
   config = lib.mkIf cfg.enable {
+
+    /*
+    # https://discourse.nixos.org/t/how-to-install-a-specific-version-of-a-package-from-my-configuration-nix/18057/20
+    hardware.overlays = [
+      (self: super: {
+        nvidia = super.nvidia.overrideAttrs (
+          _: { src = builtins.fetchTarball {
+            url = "https://discord.com/api/download?platform=linux&format=tar.gz"; 
+            sha256 = "sha256:12yrhlbigpy44rl3icir3jj2p5fqq2ywgbp5v3m1hxxmbawsm6wi";
+          };}
+        );
+      })
+
+      (final: prev: {
+        nvidia = let
+          nvidiapkgs = final.fetchFromGitHub {
+            owner = "nixos";
+            repo = "nixos-hardware";
+            rev = "7da029f26849f8696ac49652312c9171bf9eb170";
+            sha256 = "";
+          };
+          libupnp = final.callPackage "${amulepkgs}/pkgs/development/libraries/pupnp/default.nix" {
+            stdenv = final.stdenv // { inherit lib; };
+          };
+        in
+        final.callPackage "${amulepkgs}/pkgs/tools/networking/p2p/amule/default.nix" {
+          inherit libupnp;
+          cryptopp = final.cryptopp.dev;
+        };
+      })
+    ];
+    */
+
     hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable.overrideAttrs (
       { patches ? [], postUnpack ? "", postPatch ? "", preFixup ? "", ... }@attrs: {
         # Overriding https://github.com/NixOS/nixpkgs/tree/nixos-unstable/pkgs/os-specific/linux/nvidia-x11
@@ -112,7 +149,13 @@ in
       name = "nvidia-x11-${vgpuVersion}-${gridVersion}-${config.boot.kernelPackages.kernel.version}";
       version = "${vgpuVersion}";
 
+      src = pkgs.fetchurl {
+              url = "https://drive.google.com/u/0/uc?id=1dCyUteA2MqJaemRKqqTu5oed5mINu9Bw&export=download&confirm=t&uuid=3ebfe434-c85f-47e5-9980-6e086fc3e9a3&at=ANzk5s5BlvlXo-X9pbxIkmBd6P2o:1680699478854";
+              sha256 = "sha256-C8KM8TwaTYhFx/iYeXTgS9UnNDIbuNtSbGk4UwrRLHE=";
+            };
+
       # https://github.com/NixOS/nix/issues/1528
+      /*
       src = let 
         srcPath = 
           if cfg.vgpuKvmDriver != null then
@@ -127,6 +170,7 @@ in
                 storePath 
               else
                 srcPath;
+                */
 
       #src = pkgs.requireFile {
       #  name = "NVIDIA-Linux-x86_64-${gridVersion}-grid.run";
@@ -142,88 +186,11 @@ in
       #    vgpu_unlock = vgpu_unlock.src;
       #  });
 
-      postUnpack = postUnpack + ''
-        # More merging, besides patch above
-
-        #${pkgs.tree}/bin/tree "${nvidia-vgpu-kvm-src}/"
-        #echo "${nvidia-vgpu-kvm-src}"
-
-        #shopt -s dotglob
-        #mv -f ./NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm/* ./
-        #rm -r ./NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm
-
-        #ls
-        #cd ./NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm/
-        cd $(find . -maxdepth 1 -type d -iname "*NVIDIA*" -print -quit) # cd into directory with word NVIDIA in it
-
-        cp -r ${nvidia-vgpu-kvm-src}/init-scripts .
-        cp ${nvidia-vgpu-kvm-src}/kernel/common/inc/nv-vgpu-vfio-interface.h kernel/common/inc//nv-vgpu-vfio-interface.h
-        cp ${nvidia-vgpu-kvm-src}/kernel/nvidia/nv-vgpu-vfio-interface.c kernel/nvidia/nv-vgpu-vfio-interface.c
-        echo "NVIDIA_SOURCES += nvidia/nv-vgpu-vfio-interface.c" >> kernel/nvidia/nvidia-sources.Kbuild
-        cp -r ${nvidia-vgpu-kvm-src}/kernel/nvidia-vgpu-vfio kernel/nvidia-vgpu-vfio
-
-        echo 1
-
-        for i in $(find . -maxdepth 1 \( -name "libnvidia-vgpu.so.*" -o -name "libnvidia-vgxcfg.so.*" -o -name "nvidia-vgpu-mgr" -o -name "nvidia-vgpud" -o -name "vgpuConfig.xml" -o -name "sriov-manage" \)); do
-
-          #${pkgs.tree}/bin/tree
-          echo $i
-          pwd
-
-          cp ${nvidia-vgpu-kvm-src}/$i $i
-          echo 3
-        done
-
-        chmod -R u+rw .
-        
-        cd ..
-      '';
-
-      postPatch = postPatch + ''
-        # Move path for vgpuConfig.xml into /etc
-        sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
-
-        substituteInPlace sriov-manage \
-          --replace lspci ${pkgs.pciutils}/bin/lspci \
-          --replace setpci ${pkgs.pciutils}/bin/setpci
-      '';
-
-      # HACK: Using preFixup instead of postInstall since nvidia-x11 builder.sh doesn't support hooks
-      preFixup = preFixup + ''
-        for i in $(find . -maxdepth 1 \( -name "libnvidia-vgpu.so.*" -o -name "libnvidia-vgxcfg.so.*"\)); do
-          install -Dm755 "$i" "$out/lib/$i"
-        done
-
-        for file in $(find . -maxdepth 1 \( -name "libnvidia-vgpu.so.*" \)); do
-          patchelf --set-rpath ${pkgs.stdenv.cc.cc.lib}/lib $file
-        done
-        
-        install -Dm644 vgpuConfig.xml $out/vgpuConfig.xml
-
-        for i in nvidia-vgpud nvidia-vgpu-mgr; do
-          install -Dm755 "$i" "$bin/bin/$i"
-          # stdenv.cc.cc.lib is for libstdc++.so needed by nvidia-vgpud
-          patchelf --interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" \
-            --set-rpath $out/lib "$bin/bin/$i"
-        done
-        install -Dm755 sriov-manage $bin/bin/sriov-manage
-      '';
-
-    #firmware = null;
-
       installPhase = ''
     # Install libGL and friends.
 
-    echo $SHELL
-
-    bash
-    echo $SHELL
-    ${pkgs.tree}/bin/tree
-
-
     # since version 391, 32bit libraries are bundled in the 32/ sub-directory
     if [ "$i686bundled" = "1" ]; then
-        echo 1
         mkdir -p "$lib32/lib"
         cp -prd 32/*.so.* "$lib32/lib/"
         if [ -d 32/tls ]; then
@@ -231,30 +198,28 @@ in
         fi
     fi
 
-    echo 2
     mkdir -p "$out/lib"
     cp -prd *.so.* "$out/lib/"
     if [ -d tls ]; then
         cp -prd tls "$out/lib/"
     fi
 
-    echo 3
     # Install systemd power management executables
-    #if [ -e systemd/nvidia-sleep.sh ]; then
-    #    mv systemd/nvidia-sleep.sh ./
-    #fi
-    #if [ -e nvidia-sleep.sh ]; then
-    #    sed -E 's#(PATH=).*#\1"$PATH"#' nvidia-sleep.sh > nvidia-sleep.sh.fixed
-    #    install -Dm755 nvidia-sleep.sh.fixed $out/bin/nvidia-sleep.sh
-    #fi
+    if [ -e systemd/nvidia-sleep.sh ]; then
+        mv systemd/nvidia-sleep.sh ./
+    fi
+    if [ -e nvidia-sleep.sh ]; then
+        sed -E 's#(PATH=).*#\1"$PATH"#' nvidia-sleep.sh > nvidia-sleep.sh.fixed
+        install -Dm755 nvidia-sleep.sh.fixed $out/bin/nvidia-sleep.sh
+    fi
 
-    #if [ -e systemd/system-sleep/nvidia ]; then
-    #    mv systemd/system-sleep/nvidia ./
-    #fi
-    #if [ -e nvidia ]; then
-    #    sed -E "s#/usr(/bin/nvidia-sleep.sh)#$out\\1#" nvidia > nvidia.fixed
-    #    install -Dm755 nvidia.fixed $out/lib/systemd/system-sleep/nvidia
-    #fi
+    if [ -e systemd/system-sleep/nvidia ]; then
+        mv systemd/system-sleep/nvidia ./
+    fi
+    if [ -e nvidia ]; then
+        sed -E "s#/usr(/bin/nvidia-sleep.sh)#$out\\1#" nvidia > nvidia.fixed
+        install -Dm755 nvidia.fixed $out/lib/systemd/system-sleep/nvidia
+    fi
 
     for i in $lib32 $out; do
         rm -f $i/lib/lib{glx,nvidia-wfb}.so.* # handled separately
@@ -272,13 +237,9 @@ in
         # Install ICDs, make absolute paths.
         # Be careful not to modify any original files because this runs twice.
 
-        echo 3
-
         # OpenCL
         sed -E "s#(libnvidia-opencl)#$i/lib/\\1#" nvidia.icd > nvidia.icd.fixed
         install -Dm644 nvidia.icd.fixed $i/etc/OpenCL/vendors/nvidia.icd
-
-        echo 4
 
         # Vulkan
         if [ -e nvidia_icd.json.template ] || [ -e nvidia_icd.json ]; then
@@ -289,17 +250,12 @@ in
                 sed -E "s#(libGLX_nvidia)#$i/lib/\\1#" nvidia_icd.json > nvidia_icd.json.fixed
             fi
 
-            echo 5
-
-            # nvidia currently only supports x86_64 and i686
-            if [ "$i" == "$lib32" ]; then
+            if [ "$system" = "i686-linux" ]; then
                 install -Dm644 nvidia_icd.json.fixed $i/share/vulkan/icd.d/nvidia_icd.i686.json
             else
-                install -Dm644 nvidia_icd.json.fixed $i/share/vulkan/icd.d/nvidia_icd.x86_64.json
+                install -Dm644 nvidia_icd.json.fixed $i/share/vulkan/icd.d/nvidia_icd.json
             fi
         fi
-
-        echo 6
 
         if [ -e nvidia_layers.json ]; then
             sed -E "s#(libGLX_nvidia)#$i/lib/\\1#" nvidia_layers.json > nvidia_layers.json.fixed
@@ -311,28 +267,10 @@ in
             sed -E "s#(libEGL_nvidia)#$i/lib/\\1#" 10_nvidia.json > 10_nvidia.json.fixed
             sed -E "s#(libnvidia-egl-wayland)#$i/lib/\\1#" 10_nvidia_wayland.json > 10_nvidia_wayland.json.fixed
 
-            echo 7
-
-            install -Dm644 10_nvidia.json.fixed $i/share/glvnd/egl_vendor.d/10_nvidia.json
-            install -Dm644 10_nvidia_wayland.json.fixed $i/share/egl/egl_external_platform.d/10_nvidia_wayland.json
-
-            echo 8
-
-            if [[ -f "15_nvidia_gbm.json" ]]; then
-              sed -E "s#(libnvidia-egl-gbm)#$i/lib/\\1#" 15_nvidia_gbm.json > 15_nvidia_gbm.json.fixed
-              install -Dm644 15_nvidia_gbm.json.fixed $i/share/egl/egl_external_platform.d/15_nvidia_gbm.json
-
-              mkdir -p $i/lib/gbm
-              ln -s $i/lib/libnvidia-allocator.so $i/lib/gbm/nvidia-drm_gbm.so
-            fi
+            install -Dm644 10_nvidia.json.fixed $i/share/glvnd/egl_vendor.d/nvidia.json
+            install -Dm644 10_nvidia_wayland.json.fixed $i/share/glvnd/egl_vendor.d/nvidia_wayland.json
         fi
 
-        echo 9
-
-        # Install libraries needed by Proton to support DLSS
-        if [ -e nvngx.dll ] && [ -e _nvngx.dll ]; then
-            install -Dm644 -t $i/lib/nvidia/wine/ nvngx.dll _nvngx.dll
-        fi
     done
 
     if [ -n "$bin" ]; then
@@ -345,8 +283,6 @@ in
         cp -p nvidia_drv.so $bin/lib/xorg/modules/drivers
         mkdir -p $bin/lib/xorg/modules/extensions
         cp -p libglx*.so* $bin/lib/xorg/modules/extensions
-
-        echo 10
 
         # Install the kernel module.
         mkdir -p $bin/lib/modules/$kernelVersion/misc
@@ -362,17 +298,6 @@ in
             cp nvidia-application-profiles-*-key-documentation $bin/share/nvidia/nvidia-application-profiles-key-documentation
         fi
     fi
-
-    echo 11
-
-    echo $firmware/lib/firmware/nvidia/
-    echo $version
-    #ls $firmware/lib/firmware/nvidia/
-
-    #if [ -n "$firmware" ]; then
-    #    # Install the GSP firmware
-    #    install -Dm644 -t $firmware/lib/firmware/nvidia/$version firmware/gsp*.bin
-    #fi
 
     # All libs except GUI-only are installed now, so fixup them.
     for libname in $(find "$out/lib/" $(test -n "$lib32" && echo "$lib32/lib/") $(test -n "$bin" && echo "$bin/lib/") -name '*.so.*')
@@ -402,15 +327,11 @@ in
       fi
     done
 
-    echo 12
-
     if [ -n "$bin" ]; then
         # Install /share files.
         mkdir -p $bin/share/man/man1
         cp -p *.1.gz $bin/share/man/man1
         rm -f $bin/share/man/man1/{nvidia-xconfig,nvidia-settings,nvidia-persistenced}.1.gz
-
-        echo 13
 
         # Install the programs.
         for i in nvidia-cuda-mps-control nvidia-cuda-mps-server nvidia-smi nvidia-debugdump; do
@@ -424,9 +345,7 @@ in
         done
         # FIXME: needs PATH and other fixes
         # install -Dm755 nvidia-bug-report.sh $bin/bin/nvidia-bug-report.sh
-    fi  
-
-    echo 14
+    fi
 '';
 
     });
