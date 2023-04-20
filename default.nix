@@ -75,25 +75,27 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.legacy_390.overrideAttrs (
+    hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.legacy_340.overrideAttrs (
       { patches ? [], postUnpack ? "", postPatch ? "", preFixup ? "", ... }@attrs: {
       name = "nvidia-x11-${vgpuVersion}-${gridVersion}-${config.boot.kernelPackages.kernel.version}";
       version = "${vgpuVersion}";
 
-      /*
+      
       src = requireFile {
         name = "NVIDIA-Linux-x86_64-${gridVersion}-grid.run";
         sha256 = "0smvmxalxv7v12m0hvd5nx16jmcc7018s8kac3ycmxam8l0k9mw9";
       };
-      */
+      
 
+/*
       src = pkgs.fetchurl {
               name = "NVIDIA-Linux-x86_64-460.73.01-grid-vgpu-kvm-v5.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
               url = "https://drive.google.com/u/0/uc?id=1dCyUteA2MqJaemRKqqTu5oed5mINu9Bw&export=download&confirm=t";
               sha256 = "sha256-C8KM8TwaTYhFx/iYeXTgS9UnNDIbuNtSbGk4UwrRLHE=";
             };
+            */
 
-      /*
+      
       patches = patches ++ [
         ./nvidia-vgpu-merge.patch
       ] ++ lib.optional cfg.unlock.enable
@@ -142,7 +144,7 @@ in
         done
         install -Dm755 sriov-manage $bin/bin/sriov-manage
       '';
-      */
+      
     });
 
     systemd.services.nvidia-vgpud = {
