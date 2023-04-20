@@ -18,13 +18,13 @@ let
      }) { inherit config; };
   };*/
 
-  pkgs = import (builtins.fetchGit {
-         # Descriptive name to make the store path easier to identify                
-         name = "nix_pkgs_with_singularity";                                                 
-         url = "https://github.com/NixOS/nixpkgs/";                       
-         ref = "refs/heads/nixpkgs-unstable";                     
-         rev = "fadaef5aedb6b35681248f8c6096083b2efeb284";                                           
-     }) { /*inherit (config) system; inherit config;*/ };
+  #pkgs = import (builtins.fetchGit {
+  #       # Descriptive name to make the store path easier to identify                
+  #       name = "nix_pkgs_with_singularity";                                                 
+  #       url = "https://github.com/NixOS/nixpkgs/";                       
+  #       ref = "refs/heads/nixpkgs-unstable";                     
+  #       rev = "fadaef5aedb6b35681248f8c6096083b2efeb284";                                           
+  #   }) { /*inherit (config) system; inherit config;*/ };
 
   cfg = config.hardware.nvidia.vgpu;
 
@@ -173,15 +173,15 @@ in
       name = "nvidia-x11-${vgpuVersion}-${gridVersion}-${config.boot.kernelPackages.kernel.version}";
       version = "${vgpuVersion}";
 
+      
       /*
-
       src = pkgs.fetchurl {
               name = "NVIDIA-Linux-x86_64-460.73.01-grid-vgpu-kvm-v5.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
               url = "https://drive.google.com/u/0/uc?id=1dCyUteA2MqJaemRKqqTu5oed5mINu9Bw&export=download&confirm=t";
               sha256 = "sha256-C8KM8TwaTYhFx/iYeXTgS9UnNDIbuNtSbGk4UwrRLHE=";
             };
-
       */
+      
 
     });
 
