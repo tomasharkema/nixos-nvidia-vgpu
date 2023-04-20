@@ -28,7 +28,7 @@ let
 
   cfg = config.hardware.nvidia.vgpu;
 
-  mdevctl = pkgs.callPackage ./mdevctl {};
+  #mdevctl = pkgs.callPackage ./mdevctl {};
   pythonPackages = pkgs.python38Packages;
   frida = pythonPackages.callPackage ./frida {};
 
@@ -221,7 +221,11 @@ in
 
     boot.kernelModules = [ "nvidia-vgpu-vfio" ];
 
-    environment.systemPackages = [ mdevctl ];
-    services.udev.packages = [ mdevctl ];
+    environment.systemPackages = [ 
+      pkgs.mdevctl 
+    ];
+    services.udev.packages = [ 
+      pkgs.mdevctl 
+    ];
   };
 }
