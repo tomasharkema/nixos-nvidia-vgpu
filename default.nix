@@ -37,7 +37,8 @@ let
 
     # From unpackManually() in builder.sh of nvidia-x11 from nixpkgs
     skip=$(sed 's/^skip=//; t; d' $src)
-    tail -n +$skip $src | xz -d | tar xvf -
+    tail -n +$skip $src | ${pkgs.libarchive}/bin/bsdtar xvf -
+    sourceRoot=.
   '';
 
   vgpu_unlock = pkgs.stdenv.mkDerivation {
@@ -75,7 +76,7 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.legacy_340.overrideAttrs (
+    hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.legacy_470.overrideAttrs (
       { patches ? [], postUnpack ? "", postPatch ? "", preFixup ? "", ... }@attrs: {
       # Overriding https://github.com/NixOS/nixpkgs/tree/nixos-unstable/pkgs/os-specific/linux/nvidia-x11
       # that gets called from the option hardware.nvidia.package from here: https://github.com/NixOS/nixpkgs/blob/nixos-22.11/nixos/modules/hardware/video/nvidia.nix
@@ -108,6 +109,18 @@ in
 
       postUnpack = postUnpack + ''
         # More merging, besides patch above
+
+        #${pkgs.tree}/bin/tree "${nvidia-vgpu-kvm-src}/"
+        #echo "${nvidia-vgpu-kvm-src}"
+
+        #shopt -s dotglob
+        #mv -f ./NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm/* ./
+        #rm -r ./NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm
+
+        ls
+        cd ./NVIDIA-Linux-x86_64-460.32.03-grid
+        #cd ./NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm/
+
         cp -r ${nvidia-vgpu-kvm-src}/init-scripts .
         cp ${nvidia-vgpu-kvm-src}/kernel/common/inc/nv-vgpu-vfio-interface.h kernel/common/inc//nv-vgpu-vfio-interface.h
         cp ${nvidia-vgpu-kvm-src}/kernel/nvidia/nv-vgpu-vfio-interface.c kernel/nvidia/nv-vgpu-vfio-interface.c
@@ -119,6 +132,8 @@ in
         done
 
         chmod -R u+rw .
+        
+        cd ..
       '';
 
       postPatch = postPatch + ''
