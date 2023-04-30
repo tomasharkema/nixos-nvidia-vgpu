@@ -9,19 +9,9 @@ let
 
   mdevctl = pkgs.callPackage ./mdevctl {};
   pythonPackages = pkgs.python38Packages;
-  #frida = pythonPackages.callPackage ./frida {};
+  frida = pythonPackages.callPackage ./frida {};
 
-  nixpkgs.overlays = [
-    (self: super: {
-      frida-tools = super.frida-tools.overrideAttrs (
-        _: { 
-          pname = "frida"; 
-        }
-      );
-    })
-  ];
-
-  frida = nur.repos.genesis.frida-tools.override { pname = "frida"; };
+  #frida = nur.repos.genesis.frida-tools;
 
   vgpuVersion = "460.32.04";
   gridVersion = "460.32.03";
