@@ -3,9 +3,25 @@
 let
   cfg = config.hardware.nvidia.vgpu;
 
+  nur = import (builtins.fetchTarball "https://github.com/nix-community/NUR/archive/master.tar.gz") {
+    inherit pkgs;
+  };
+
   mdevctl = pkgs.callPackage ./mdevctl {};
   pythonPackages = pkgs.python38Packages;
-  frida = pythonPackages.callPackage ./frida {};
+  #frida = pythonPackages.callPackage ./frida {};
+
+  nixpkgs.overlays = [
+    (self: super: {
+      frida-tools = super.frida-tools.overrideAttrs (
+        _: { 
+          pname = "frida"; 
+        }
+      );
+    })
+  ];
+
+  frida = nur.repos.genesis.frida-tools.override { pname = "frida"; };
 
   vgpuVersion = "460.32.04";
   gridVersion = "460.32.03";
@@ -83,22 +99,23 @@ in
       name = "nvidia-x11-${vgpuVersion}-${gridVersion}-${config.boot.kernelPackages.kernel.version}";
       version = "${vgpuVersion}";
 
-      
+      /*
       src = requireFile {
         name = "NVIDIA-Linux-x86_64-${gridVersion}-grid.run";
         sha256 = "0smvmxalxv7v12m0hvd5nx16jmcc7018s8kac3ycmxam8l0k9mw9";
       };
+      */
       
 
-/*
+
       src = pkgs.fetchurl {
               name = "NVIDIA-Linux-x86_64-460.73.01-grid-vgpu-kvm-v5.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
               url = "https://drive.google.com/u/0/uc?id=1dCyUteA2MqJaemRKqqTu5oed5mINu9Bw&export=download&confirm=t";
               sha256 = "sha256-C8KM8TwaTYhFx/iYeXTgS9UnNDIbuNtSbGk4UwrRLHE=";
             };
-            */
+            
 
-      
+      /* 
       patches = patches ++ [
         ./nvidia-vgpu-merge.patch
       ] ++ lib.optional cfg.unlock.enable
@@ -106,7 +123,7 @@ in
           src = ./nvidia-vgpu-unlock.patch;
           vgpu_unlock = vgpu_unlock.src;
         });
-
+      
       postUnpack = postUnpack + ''
         # More merging, besides patch above
 
@@ -119,6 +136,8 @@ in
 
         ls
         cd ./NVIDIA-Linux-x86_64-460.32.03-grid
+        #cp -r ./NVIDIA-Linux-x86_64-460.32.03-grid/. ./
+
         #cd ./NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm/
 
         cp -r ${nvidia-vgpu-kvm-src}/init-scripts .
@@ -133,6 +152,7 @@ in
 
         chmod -R u+rw .
         
+        #cd ./NVIDIA-Linux-x86_64-460.32.03-grid
         cd ..
       '';
 
@@ -161,6 +181,7 @@ in
         done
         install -Dm755 sriov-manage $bin/bin/sriov-manage
       '';
+      */
       
     });
 
@@ -195,7 +216,7 @@ in
 
     boot.kernelModules = [ "nvidia-vgpu-vfio" ];
 
-    environment.systemPackages = [ mdevctl ];
+    environment.systemPackages = [ mdevctl];
     services.udev.packages = [ mdevctl ];
   };
 }
