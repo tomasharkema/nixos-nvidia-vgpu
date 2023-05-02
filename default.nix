@@ -98,7 +98,7 @@ let
 
   # ============================================= #
 
-  vgpuVersion = "460.32.04";
+  vgpuVersion = "460.73.01";
   gridVersion = "460.32.03";
   guestVersion = "461.33";
 
@@ -116,7 +116,7 @@ let
         nix-prefetch-url --type sha256 file:///path/to/${name}
     '';
   } // args);
-
+/*
   nvidia-vgpu-kvm-src = pkgs.runCommand "nvidia-${vgpuVersion}-vgpu-kvm-src" {
     src = requireFile {
       name = "NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm.run";
@@ -130,7 +130,7 @@ let
     skip=$(sed 's/^skip=//; t; d' $src)
     tail -n +$skip $src | ${pkgs.libarchive}/bin/bsdtar xvf -
     sourceRoot=.
-  '';
+  ''; */
 
   vgpu_unlock = pkgs.stdenv.mkDerivation {
     name = "nvidia-vgpu-unlock";
@@ -187,31 +187,31 @@ in
       name = "nvidia-x11-${vgpuVersion}-${gridVersion}-${config.boot.kernelPackages.kernel.version}";
       version = "${vgpuVersion}";
 
-      
+      /*
       src = requireFile {
         name = "NVIDIA-Linux-x86_64-${gridVersion}-grid.run";
         sha256 = "0smvmxalxv7v12m0hvd5nx16jmcc7018s8kac3ycmxam8l0k9mw9";
       };
-      
+      */
       
 
-/*
+
       src = pkgs.fetchurl {
               name = "NVIDIA-Linux-x86_64-460.73.01-grid-vgpu-kvm-v5.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
               url = "https://drive.google.com/u/0/uc?id=1dCyUteA2MqJaemRKqqTu5oed5mINu9Bw&export=download&confirm=t";
               sha256 = "sha256-C8KM8TwaTYhFx/iYeXTgS9UnNDIbuNtSbGk4UwrRLHE=";
             };
-            */
+            
 
       
       patches = patches ++ [
-        ./nvidia-vgpu-merge.patch
+
       ] ++ lib.optional cfg.unlock.enable
         (pkgs.substituteAll {
           src = ./nvidia-vgpu-unlock.patch;
           vgpu_unlock = vgpu_unlock.src;
         });
-      
+      /*
       postUnpack = postUnpack + ''
         # More merging, besides patch above
 
@@ -223,7 +223,7 @@ in
         #rm -r ./NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm
 
         ls
-        cd ./NVIDIA-Linux-x86_64-460.32.03-grid
+        cd ./NVIDIA-Linux-x86_64-460.32.03-grid || cd NVIDIA-Linux-x86_64-460.73.01-grid-vgpu-kvm-v5
         #cp -r ./NVIDIA-Linux-x86_64-460.32.03-grid/. ./
 
         #cd ./NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm/
@@ -243,6 +243,7 @@ in
         #cd ./NVIDIA-Linux-x86_64-460.32.03-grid
         cd ..
       '';
+      */
 
       postPatch = postPatch + ''
         # Move path for vgpuConfig.xml into /etc
