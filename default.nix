@@ -1,6 +1,7 @@
 { pkgs, lib, config, ... }:
 
 let
+  
   cfg = config.hardware.nvidia.vgpu;
 
   nur = import (builtins.fetchTarball "https://github.com/nix-community/NUR/archive/master.tar.gz") {
@@ -11,7 +12,90 @@ let
   pythonPackages = pkgs.python38Packages;
   frida = pythonPackages.callPackage ./frida {};
 
+  #frida-nix = (builtins.getFlake "github:itstarsun/frida-nix"); # nix develop 'github:itstarsun/frida-nix#frida-tools'
+  # frida-nix = (builtins.getFlake "github:itstarsun/frida-nix").devShells.x86_64-linux.default;
+  frida-nix = (builtins.getFlake "github:itstarsun/frida-nix").packages.x86_64-linux.frida-tools;
+  #python-env = frida-nix.outputs.frida-tools
+
   #frida = nur.repos.genesis.frida-tools;
+
+  # ============================================= #
+
+  default-metadata = builtins.fromJSON (builtins.readFile ./metadata.json);
+  default-overlay = mkOverlay { };
+
+/*
+  tools-version = metadata.latest-tools;
+  metadata = default-metadata;
+  version = metadata.latest-release;
+
+  frida = pythonPackages.callPackage ./frida-python {
+    inherit version;
+    src = pkgs.fetchurl metadata.releases.${version}.frida-python;
+  };
+
+  frida-tools = pythonPackages.callPackage ./frida-tools {
+    version = tools-version;
+    src = pkgs.fetchurl metadata.tools.${tools-version};
+    inherit frida;
+  }; */
+
+  frida-lib = import ./frida-nix/.;
+
+  flakeModule = ./flake-module.nix;
+
+  templates.default = {
+    path = ./templates/flake-parts;
+    description = ''
+      A template with flake-parts and frida-nix.
+    '';
+  };  
+
+  overlays.default = frida-lib.default-overlay;
+
+  frida-shit-pkgs = import (builtins.fetchTarball "https://github.com/NixOS/nixpkgs/archive/nixos-unstable.tar.gz") { };
+
+  pkgs-frida = frida-shit-pkgs.extend overlays.default;
+  frida-tools = pkgs.python3Packages.frida-tools;
+
+
+  mkOverlay =
+    { metadata ? default-metadata
+    , version ? metadata.latest-release
+    , tools-version ? metadata.latest-tools
+    }: (final: prev:
+    let
+      inherit (final) fetchurl;
+
+      mkFridaDevkit = pname:
+        final.callPackage ./frida-devkit {
+          inherit pname version;
+          src = fetchurl metadata.releases.${version}.per-system.${final.system}.${pname};
+        };
+    in
+    {
+      frida-core = mkFridaDevkit "frida-core";
+      frida-gum = mkFridaDevkit "frida-gum";
+      frida-gumjs = mkFridaDevkit "frida-gumjs";
+
+      pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
+        (python-final: python-prev: {
+          frida = python-final.callPackage ./frida-python {
+            inherit version;
+            src = fetchurl metadata.releases.${version}.frida-python;
+          };
+
+          frida-tools = python-final.callPackage ./frida-tools {
+            version = tools-version;
+            src = fetchurl metadata.tools.${tools-version};
+          };
+        })
+      ];
+
+    });
+
+
+  # ============================================= #
 
   vgpuVersion = "460.32.04";
   gridVersion = "460.32.03";
