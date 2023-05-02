@@ -10,12 +10,13 @@ let
 
   mdevctl = pkgs.callPackage ./mdevctl {};
   pythonPackages = pkgs.python38Packages;
-  frida = pythonPackages.callPackage ./frida {};
+  #frida = pythonPackages.callPackage ./frida {};
 
   #frida-nix = (builtins.getFlake "github:itstarsun/frida-nix"); # nix develop 'github:itstarsun/frida-nix#frida-tools'
   # frida-nix = (builtins.getFlake "github:itstarsun/frida-nix").devShells.x86_64-linux.default;
-  frida-nix = (builtins.getFlake "github:itstarsun/frida-nix").packages.x86_64-linux.frida-tools;
+  frida = (builtins.getFlake "github:itstarsun/frida-nix").packages.x86_64-linux.frida-tools;
   #python-env = frida-nix.outputs.frida-tools
+  my-python = (pythonPackages.python.withPackages (p: [ frida ]));
 
   #frida = nur.repos.genesis.frida-tools;
 
@@ -142,9 +143,22 @@ let
       sha256 = "0s8bmscb8irj1sggfg1fhacqd1lh59l326bnrk4a2g4qngsbkix3";
     };
 
-    buildInputs = [ (pythonPackages.python.withPackages (p: [ frida ])) ];
+    buildInputs = [ frida /*pkgs.python2 my-python*/ ];
+
+    shellHook = ''
+      echo ${frida}
+    '';
 
     postPatch = ''
+      echo ${frida}
+      python --version
+      ${pkgs.unixtools.util-linux}/bin/whereis python
+
+      env | grep PYTHON
+      python --version
+      python -c "import frida" && echo "frida is installed" || echo "frida is not installed"
+      
+      
       substituteInPlace vgpu_unlock \
         --replace /bin/bash ${pkgs.bash}/bin/bash
     '';
@@ -268,7 +282,7 @@ in
         Type = "forking";
         ExecStart = "${lib.optionalString cfg.unlock.enable "${vgpu_unlock}/bin/vgpu_unlock "}${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpud";
         ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpud";
-        Environment = [ "__RM_NO_VERSION_CHECK=1" ]; # Avoids issue with API version incompatibility when merging host/client drivers
+        Environment = [ "__RM_NO_VERSION_CHECK=1" "_PYTHON_HOST_PLATFORM=linux-x86_64" "PYTHONNOUSERSITE=1" "PYTHONHASHSEED=0" "_PYTHON_SYSCONFIGDATA_NAME=_sysconfigdata__linux_x86_64-linux-gnu" "PYTHONPATH=/nix/store/sb4a338qh7wld75zbcgrylrpqmjnfh27-python3.10-frida-tools-12.1.1/lib/python3.10/site-packages:/nix/store/ndr7x7qhkssarrgjpqqnv8i9py4vyc9c-python3.10-colorama-0.4.6/lib/python3.10/site-packages:/nix/store/fdqpyj613dr0v1l1lrzqhzay7sk4xg87-python3-3.10.10/lib/python3.10/site-packages:/nix/store/lz6vq2kp7rww3jj6f7zgf4n50c3qvc83-python3.10-frida-16.0.18/lib/python3.10/site-packages:/nix/store/k7xyj5b5dw0cna25b91ygqskkwv8na4s-python3.10-typing-extensions-4.5.0/lib/python3.10/site-packages:/nix/store/pf9j3spzhbz7gvmbyk6a5kwcmi7zvpmy-python3.10-prompt-toolkit-3.0.38/lib/python3.10/site-packages:/nix/store/hix271phwzb157a2sj9fn5zfmkpz8zpd-python3.10-six-1.16.0/lib/python3.10/site-packages:/nix/store/khqw9ph04dvjy86rlzxzhyk21c2binhi-python3.10-wcwidth-0.2.6/lib/python3.10/site-packages:/nix/store/fpcah4a88pjj7jmwhrcvfb9kg6qj58vc-python3.10-setuptools-67.4.0/lib/python3.10/site-packages:/nix/store/asf94iynbzxraqzmbi2w69vj3khaphan-python3.10-pygments-2.14.0/lib/python3.10/site-packages:/nix/store/d8ghysrcn5nsyh9w3gvwg5kk1iyy510r-python3.10-docutils-0.19/lib/python3.10/site-packages" ]; # Avoids issue with API version incompatibility when merging host/client drivers
       };
     };
 
@@ -282,7 +296,7 @@ in
         KillMode = "process";
         ExecStart = "${lib.optionalString cfg.unlock.enable "${vgpu_unlock}/bin/vgpu_unlock "}${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpu-mgr";
         ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpu-mgr";
-        Environment = [ "__RM_NO_VERSION_CHECK=1" ];
+        Environment = [ "__RM_NO_VERSION_CHECK=1" "_PYTHON_HOST_PLATFORM=linux-x86_64" "PYTHONNOUSERSITE=1" "PYTHONHASHSEED=0" "_PYTHON_SYSCONFIGDATA_NAME=_sysconfigdata__linux_x86_64-linux-gnu" "PYTHONPATH=/nix/store/sb4a338qh7wld75zbcgrylrpqmjnfh27-python3.10-frida-tools-12.1.1/lib/python3.10/site-packages:/nix/store/ndr7x7qhkssarrgjpqqnv8i9py4vyc9c-python3.10-colorama-0.4.6/lib/python3.10/site-packages:/nix/store/fdqpyj613dr0v1l1lrzqhzay7sk4xg87-python3-3.10.10/lib/python3.10/site-packages:/nix/store/lz6vq2kp7rww3jj6f7zgf4n50c3qvc83-python3.10-frida-16.0.18/lib/python3.10/site-packages:/nix/store/k7xyj5b5dw0cna25b91ygqskkwv8na4s-python3.10-typing-extensions-4.5.0/lib/python3.10/site-packages:/nix/store/pf9j3spzhbz7gvmbyk6a5kwcmi7zvpmy-python3.10-prompt-toolkit-3.0.38/lib/python3.10/site-packages:/nix/store/hix271phwzb157a2sj9fn5zfmkpz8zpd-python3.10-six-1.16.0/lib/python3.10/site-packages:/nix/store/khqw9ph04dvjy86rlzxzhyk21c2binhi-python3.10-wcwidth-0.2.6/lib/python3.10/site-packages:/nix/store/fpcah4a88pjj7jmwhrcvfb9kg6qj58vc-python3.10-setuptools-67.4.0/lib/python3.10/site-packages:/nix/store/asf94iynbzxraqzmbi2w69vj3khaphan-python3.10-pygments-2.14.0/lib/python3.10/site-packages:/nix/store/d8ghysrcn5nsyh9w3gvwg5kk1iyy510r-python3.10-docutils-0.19/lib/python3.10/site-packages"];
       };
     };
 
