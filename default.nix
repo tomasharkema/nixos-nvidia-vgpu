@@ -180,7 +180,7 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.legacy_470.overrideAttrs (
+    hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable.overrideAttrs (
       { patches ? [], postUnpack ? "", postPatch ? "", preFixup ? "", ... }@attrs: {
       # Overriding https://github.com/NixOS/nixpkgs/tree/nixos-unstable/pkgs/os-specific/linux/nvidia-x11
       # that gets called from the option hardware.nvidia.package from here: https://github.com/NixOS/nixpkgs/blob/nixos-22.11/nixos/modules/hardware/video/nvidia.nix
@@ -194,16 +194,22 @@ in
       };
       */
       
+      # the new driver
+      src = pkgs.fetchurl {
+              name = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
+              url = "https://drive.google.com/u/1/uc?id=1Orzq0D7fx9FklVPnjKfIva2Ewo8shp-F&export=download&confirm=t&uuid=e1544162-6011-46b3-9a3f-c0cfff0c88fd&at=AKKF8vx99LF_00gIvvo5CTk26bbL:1683141215106";
+              sha256 = "sha256-e96gfOJuZjA0AkjeoQ4W5DCixg/thKWqnTwmfnBnAe0=#####33sadsa";
+            };
 
-
+      /*
       src = pkgs.fetchurl {
               name = "NVIDIA-Linux-x86_64-460.73.01-grid-vgpu-kvm-v5.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
               url = "https://drive.google.com/u/0/uc?id=1dCyUteA2MqJaemRKqqTu5oed5mINu9Bw&export=download&confirm=t";
               sha256 = "sha256-C8KM8TwaTYhFx/iYeXTgS9UnNDIbuNtSbGk4UwrRLHE=";
             };
-            
+       */     
 
-      
+      /*
       patches = patches ++ [
 
       ] ++ lib.optional cfg.unlock.enable
@@ -211,7 +217,7 @@ in
           src = ./nvidia-vgpu-unlock.patch;
           vgpu_unlock = vgpu_unlock.src;
         });
-      /*
+      
       postUnpack = postUnpack + ''
         # More merging, besides patch above
 
@@ -243,7 +249,7 @@ in
         #cd ./NVIDIA-Linux-x86_64-460.32.03-grid
         cd ..
       '';
-      */
+      
 
       postPatch = postPatch + ''
         # Move path for vgpuConfig.xml into /etc
@@ -270,6 +276,7 @@ in
         done
         install -Dm755 sriov-manage $bin/bin/sriov-manage
       '';
+      */
       
       
     });
