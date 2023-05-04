@@ -98,9 +98,11 @@ let
 
   # ============================================= #
 
-  vgpuVersion = "460.73.01";
+  vgpuVersion = "460.32.04";
   gridVersion = "460.32.03";
   guestVersion = "461.33";
+
+  myVgpuVersion = "525.105.14";
 
   combinedZipName = "NVIDIA-GRID-Linux-KVM-${vgpuVersion}-${gridVersion}-${guestVersion}.zip";
   requireFile = { name, ... }@args: pkgs.requireFile (rec {
@@ -116,7 +118,7 @@ let
         nix-prefetch-url --type sha256 file:///path/to/${name}
     '';
   } // args);
-/*
+
   nvidia-vgpu-kvm-src = pkgs.runCommand "nvidia-${vgpuVersion}-vgpu-kvm-src" {
     src = requireFile {
       name = "NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm.run";
@@ -130,7 +132,7 @@ let
     skip=$(sed 's/^skip=//; t; d' $src)
     tail -n +$skip $src | ${pkgs.libarchive}/bin/bsdtar xvf -
     sourceRoot=.
-  ''; */
+  ''; 
 
   vgpu_unlock = pkgs.stdenv.mkDerivation {
     name = "nvidia-vgpu-unlock";
@@ -184,7 +186,7 @@ in
       { patches ? [], postUnpack ? "", postPatch ? "", preFixup ? "", ... }@attrs: {
       # Overriding https://github.com/NixOS/nixpkgs/tree/nixos-unstable/pkgs/os-specific/linux/nvidia-x11
       # that gets called from the option hardware.nvidia.package from here: https://github.com/NixOS/nixpkgs/blob/nixos-22.11/nixos/modules/hardware/video/nvidia.nix
-      name = "nvidia-x11-${vgpuVersion}-${gridVersion}-${config.boot.kernelPackages.kernel.version}";
+      name = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched-${config.boot.kernelPackages.kernel.version}";
       version = "${vgpuVersion}";
 
       /*
@@ -217,6 +219,9 @@ in
           src = ./nvidia-vgpu-unlock.patch;
           vgpu_unlock = vgpu_unlock.src;
         });
+        */
+
+        /*
       
       postUnpack = postUnpack + ''
         # More merging, besides patch above
@@ -228,19 +233,24 @@ in
         #mv -f ./NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm/* ./
         #rm -r ./NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm
 
-        ls
-        cd ./NVIDIA-Linux-x86_64-460.32.03-grid || cd NVIDIA-Linux-x86_64-460.73.01-grid-vgpu-kvm-v5
+        
+        
+        #cd ./NVIDIA-Linux-x86_64-460.32.03-grid || cd NVIDIA-Linux-x86_64-460.73.01-grid-vgpu-kvm-v5 || cd NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched
         #cp -r ./NVIDIA-Linux-x86_64-460.32.03-grid/. ./
 
         #cd ./NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm/
 
-        cp -r ${nvidia-vgpu-kvm-src}/init-scripts .
-        cp ${nvidia-vgpu-kvm-src}/kernel/common/inc/nv-vgpu-vfio-interface.h kernel/common/inc//nv-vgpu-vfio-interface.h
-        cp ${nvidia-vgpu-kvm-src}/kernel/nvidia/nv-vgpu-vfio-interface.c kernel/nvidia/nv-vgpu-vfio-interface.c
-        echo "NVIDIA_SOURCES += nvidia/nv-vgpu-vfio-interface.c" >> kernel/nvidia/nvidia-sources.Kbuild
-        cp -r ${nvidia-vgpu-kvm-src}/kernel/nvidia-vgpu-vfio kernel/nvidia-vgpu-vfio
+        #cp -r ${nvidia-vgpu-kvm-src}/init-scripts .
+        #cp ${nvidia-vgpu-kvm-src}/kernel/common/inc/nv-vgpu-vfio-interface.h kernel/common/inc//nv-vgpu-vfio-interface.h
+        #cp ${nvidia-vgpu-kvm-src}/kernel/nvidia/nv-vgpu-vfio-interface.c kernel/nvidia/nv-vgpu-vfio-interface.c
+        #echo "NVIDIA_SOURCES += nvidia/nv-vgpu-vfio-interface.c" >> kernel/nvidia/nvidia-sources.Kbuild
+        #cp -r ${nvidia-vgpu-kvm-src}/kernel/nvidia-vgpu-vfio kernel/nvidia-vgpu-vfio
+        
+        ${pkgs.tree}/bin/tree
 
-        for i in libnvidia-vgpu.so.${vgpuVersion} libnvidia-vgxcfg.so.${vgpuVersion} nvidia-vgpu-mgr nvidia-vgpud vgpuConfig.xml sriov-manage; do
+        cd ./NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched
+
+        for i in libnvidia-vgpu.so.${myVgpuVersion} libnvidia-vgxcfg.so.${myVgpuVersion} nvidia-vgpu-mgr nvidia-vgpud vgpuConfig.xml sriov-manage; do
           cp ${nvidia-vgpu-kvm-src}/$i $i
         done
 
@@ -249,6 +259,8 @@ in
         #cd ./NVIDIA-Linux-x86_64-460.32.03-grid
         cd ..
       '';
+      */
+      
       
 
       postPatch = postPatch + ''
@@ -262,10 +274,10 @@ in
 
       # HACK: Using preFixup instead of postInstall since nvidia-x11 builder.sh doesn't support hooks
       preFixup = preFixup + ''
-        for i in libnvidia-vgpu.so.${vgpuVersion} libnvidia-vgxcfg.so.${vgpuVersion}; do
+        for i in libnvidia-vgpu.so.${myVgpuVersion} libnvidia-vgxcfg.so.${myVgpuVersion}; do
           install -Dm755 "$i" "$out/lib/$i"
         done
-        patchelf --set-rpath ${pkgs.stdenv.cc.cc.lib}/lib $out/lib/libnvidia-vgpu.so.${vgpuVersion}
+        patchelf --set-rpath ${pkgs.stdenv.cc.cc.lib}/lib $out/lib/libnvidia-vgpu.so.${myVgpuVersion}
         install -Dm644 vgpuConfig.xml $out/vgpuConfig.xml
 
         for i in nvidia-vgpud nvidia-vgpu-mgr; do
@@ -276,7 +288,7 @@ in
         done
         install -Dm755 sriov-manage $bin/bin/sriov-manage
       '';
-      */
+      
       
       
     });
