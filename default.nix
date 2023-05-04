@@ -197,8 +197,8 @@ in
       # the new driver
       src = pkgs.fetchurl {
               name = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
-              url = "https://drive.google.com/u/1/uc?id=1Orzq0D7fx9FklVPnjKfIva2Ewo8shp-F&export=download&confirm=t&uuid=e1544162-6011-46b3-9a3f-c0cfff0c88fd&at=AKKF8vx99LF_00gIvvo5CTk26bbL:1683141215106";
-              sha256 = "sha256-e96gfOJuZjA0AkjeoQ4W5DCixg/thKWqnTwmfnBnAe0=#####33sadsa";
+              url = "https://drive.google.com/u/1/uc?id=17NN0zZcoj-uY2BELxY2YqGvf6KtZNXhG&export=download&confirm=t&uuid=e2729c36-3bb7-4be6-95b0-08e06eac55ce&at=AKKF8vzPeXmt0W_pxHE9rMqewfXY:1683158182055";
+              sha256 = "sha256-g8BM1g/tYv3G9vTKs581tfSpjB6ynX2+FaIOyFcDfdI=";
             };
 
       /*
