@@ -202,8 +202,18 @@ in
               url = "https://drive.google.com/u/1/uc?id=17NN0zZcoj-uY2BELxY2YqGvf6KtZNXhG&export=download&confirm=t&uuid=e2729c36-3bb7-4be6-95b0-08e06eac55ce&at=AKKF8vzPeXmt0W_pxHE9rMqewfXY:1683158182055";
               sha256 = "sha256-g8BM1g/tYv3G9vTKs581tfSpjB6ynX2+FaIOyFcDfdI=";
             };
+      
+      /*
+      # the new driver without the vcfgclone line
+      src = pkgs.fetchurl {
+              name = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
+              url = "https://drive.google.com/u/1/uc?id=1hPvwfN6w8yEG4RR2vmEyK0TGza_chP1w&export=download&confirm=t&uuid=77a85c8e-ff2c-4319-945a-647ddca919de&at=AKKF8vyptMEf0ZURtYnMpYd1Y4VG:1683477869826";
+              sha256 = "sha256-srDbv4i9d4LiMCW2hRrLja/peBwB9CeGwIYSuUy4Ui0=";
+            };
+      */
 
       /*
+      # the old driver (from vgpu_unlock official github)
       src = pkgs.fetchurl {
               name = "NVIDIA-Linux-x86_64-460.73.01-grid-vgpu-kvm-v5.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
               url = "https://drive.google.com/u/0/uc?id=1dCyUteA2MqJaemRKqqTu5oed5mINu9Bw&export=download&confirm=t";
