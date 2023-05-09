@@ -178,10 +178,33 @@ in
         type = lib.types.bool;
         description = "Unlock vGPU functionality for consumer grade GPUs";
       };
+
+      # submodule
+      fastapi-dls = lib.mkOption {
+        description = "Set up fastapi-dls host server";
+        type = with lib.types; submodule {
+          options = {
+            enable = lib.mkOption {
+              default = false;
+              type = lib.types.bool;
+              description = "Set up fastapi-dls host server";
+            };
+            docker-directory = lib.mkOption {
+              description = "Path to your folder with docker containers";
+              default = /opt/docker;
+              example = /dockers;
+              type = lib.types.path;
+            };
+          };
+        };
+      };
+      
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkMerge [
+
+ (lib.mkIf cfg.enable {
     hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable.overrideAttrs (
       { patches ? [], postUnpack ? "", postPatch ? "", preFixup ? "", ... }@attrs: {
       # Overriding https://github.com/NixOS/nixpkgs/tree/nixos-unstable/pkgs/os-specific/linux/nvidia-x11
@@ -189,89 +212,12 @@ in
       name = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched-${config.boot.kernelPackages.kernel.version}";
       version = "${vgpuVersion}";
 
-      /*
-      src = requireFile {
-        name = "NVIDIA-Linux-x86_64-${gridVersion}-grid.run";
-        sha256 = "0smvmxalxv7v12m0hvd5nx16jmcc7018s8kac3ycmxam8l0k9mw9";
-      };
-      */
-      
       # the new driver
       src = pkgs.fetchurl {
               name = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
               url = "https://drive.google.com/u/1/uc?id=17NN0zZcoj-uY2BELxY2YqGvf6KtZNXhG&export=download&confirm=t&uuid=e2729c36-3bb7-4be6-95b0-08e06eac55ce&at=AKKF8vzPeXmt0W_pxHE9rMqewfXY:1683158182055";
               sha256 = "sha256-g8BM1g/tYv3G9vTKs581tfSpjB6ynX2+FaIOyFcDfdI=";
             };
-      
-      /*
-      # the new driver without the vcfgclone line
-      src = pkgs.fetchurl {
-              name = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
-              url = "https://drive.google.com/u/1/uc?id=1hPvwfN6w8yEG4RR2vmEyK0TGza_chP1w&export=download&confirm=t&uuid=77a85c8e-ff2c-4319-945a-647ddca919de&at=AKKF8vyptMEf0ZURtYnMpYd1Y4VG:1683477869826";
-              sha256 = "sha256-srDbv4i9d4LiMCW2hRrLja/peBwB9CeGwIYSuUy4Ui0=";
-            };
-      */
-
-      /*
-      # the old driver (from vgpu_unlock official github)
-      src = pkgs.fetchurl {
-              name = "NVIDIA-Linux-x86_64-460.73.01-grid-vgpu-kvm-v5.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
-              url = "https://drive.google.com/u/0/uc?id=1dCyUteA2MqJaemRKqqTu5oed5mINu9Bw&export=download&confirm=t";
-              sha256 = "sha256-C8KM8TwaTYhFx/iYeXTgS9UnNDIbuNtSbGk4UwrRLHE=";
-            };
-       */     
-
-      /*
-      patches = patches ++ [
-
-      ] ++ lib.optional cfg.unlock.enable
-        (pkgs.substituteAll {
-          src = ./nvidia-vgpu-unlock.patch;
-          vgpu_unlock = vgpu_unlock.src;
-        });
-        */
-
-        /*
-      
-      postUnpack = postUnpack + ''
-        # More merging, besides patch above
-
-        #${pkgs.tree}/bin/tree "${nvidia-vgpu-kvm-src}/"
-        #echo "${nvidia-vgpu-kvm-src}"
-
-        #shopt -s dotglob
-        #mv -f ./NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm/* ./
-        #rm -r ./NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm
-
-        
-        
-        #cd ./NVIDIA-Linux-x86_64-460.32.03-grid || cd NVIDIA-Linux-x86_64-460.73.01-grid-vgpu-kvm-v5 || cd NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched
-        #cp -r ./NVIDIA-Linux-x86_64-460.32.03-grid/. ./
-
-        #cd ./NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm/
-
-        #cp -r ${nvidia-vgpu-kvm-src}/init-scripts .
-        #cp ${nvidia-vgpu-kvm-src}/kernel/common/inc/nv-vgpu-vfio-interface.h kernel/common/inc//nv-vgpu-vfio-interface.h
-        #cp ${nvidia-vgpu-kvm-src}/kernel/nvidia/nv-vgpu-vfio-interface.c kernel/nvidia/nv-vgpu-vfio-interface.c
-        #echo "NVIDIA_SOURCES += nvidia/nv-vgpu-vfio-interface.c" >> kernel/nvidia/nvidia-sources.Kbuild
-        #cp -r ${nvidia-vgpu-kvm-src}/kernel/nvidia-vgpu-vfio kernel/nvidia-vgpu-vfio
-        
-        ${pkgs.tree}/bin/tree
-
-        cd ./NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched
-
-        for i in libnvidia-vgpu.so.${myVgpuVersion} libnvidia-vgxcfg.so.${myVgpuVersion} nvidia-vgpu-mgr nvidia-vgpud vgpuConfig.xml sriov-manage; do
-          cp ${nvidia-vgpu-kvm-src}/$i $i
-        done
-
-        chmod -R u+rw .
-        
-        #cd ./NVIDIA-Linux-x86_64-460.32.03-grid
-        cd ..
-      '';
-      */
-      
-      
 
       postPatch = postPatch + ''
         # Move path for vgpuConfig.xml into /etc
@@ -298,9 +244,6 @@ in
         done
         install -Dm755 sriov-manage $bin/bin/sriov-manage
       '';
-      
-      
-      
     });
 
     systemd.services.nvidia-vgpud = {
@@ -336,5 +279,48 @@ in
 
     environment.systemPackages = [ mdevctl];
     services.udev.packages = [ mdevctl ];
-  };
+
+  })
+
+    # fastapi-dls docker service
+    /*
+    sudo mkdir -p /opt/docker/fastapi-dls/cert
+
+    WORKING_DIR=/opt/docker/fastapi-dls/cert
+    mkdir -p $WORKING_DIR
+    cd $WORKING_DIR
+    # create instance private and public key for singing JWT's
+    openssl genrsa -out $WORKING_DIR/instance.private.pem 2048 
+    openssl rsa -in $WORKING_DIR/instance.private.pem -outform PEM -pubout -out $WORKING_DIR/instance.public.pem
+    # create ssl certificate for integrated webserver (uvicorn) - because clients rely on ssl
+    openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -keyout  $WORKING_DIR/webserver.key -out $WORKING_DIR/webserver.crt
+    */
+    (lib.mkIf cfg.fastapi-dls.enable {
+      virtualisation.oci-containers.containers = {
+        fastapi-dls = {
+          image = "collinwebdesigns/fastapi-dls:latest";
+          volumes = [
+            "${cfg.fastapi-dls.docker-directory}/fastapi-dls/cert:/app/cert:rw"
+            "dls-db:/app/database"
+          ];
+          # Set environment variables
+          environment = {
+            TZ = "Europe/Lisbon";
+            DLS_URL = "192.168.1.81"; # this should grab your hostname, not your IP!
+            DLS_PORT = "443";
+            LEASE_EXPIRE_DAYS="90";
+            DATABASE = "sqlite:////app/database/db.sqlite";
+            DEBUG = "true";
+          };
+          extraOptions = [
+          ];
+          # Publish the container's port to the host
+          ports = [ "443:443" ];
+          # Automatically start the container
+          autoStart = true;
+        };
+      };
+    })
+
+  ];
 }
