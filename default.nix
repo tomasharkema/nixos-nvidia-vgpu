@@ -1,7 +1,12 @@
-{ pkgs, lib, config, buildPythonPackage, ... }:
+{ /*pkgs,*/ lib, config, buildPythonPackage, ... }:
 
 let
   
+  # UNCOMMENT this to pin the version of pkgs if this stops working
+  #pkgs = import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/06278c77b5d162e62df170fec307e83f1812d94b.tar.gz") {
+  #    # config.allowUnfree = true;
+  #};
+
   cfg = config.hardware.nvidia.vgpu;
 
   mdevctl = pkgs.callPackage ./mdevctl {};
@@ -10,7 +15,7 @@ let
   #frida-nix = (builtins.getFlake "github:itstarsun/frida-nix"); # nix develop 'github:itstarsun/frida-nix#frida-tools'
   # frida-nix = (builtins.getFlake "github:itstarsun/frida-nix").devShells.x86_64-linux.default;
   frida = (builtins.getFlake "github:itstarsun/frida-nix").packages.x86_64-linux.frida-tools;
-  frida-py = (builtins.getFlake "github:itstarsun/frida-nix").packages.x86_64-linux.frida-python;
+  #frida-py = (builtins.getFlake "github:itstarsun/frida-nix").packages.x86_64-linux.frida-python;
 
   python-with-my-packages = pkgs.python3.withPackages (p: with p; [
     frida
@@ -238,7 +243,7 @@ in
   config = lib.mkMerge [
 
  (lib.mkIf cfg.enable {
-    hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable.overrideAttrs (
+    hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable.overrideAttrs ( # CHANGE stable to legacy_470 to pin the version of the driver if it stops working
       { patches ? [], postUnpack ? "", postPatch ? "", preFixup ? "", ... }@attrs: {
       # Overriding https://github.com/NixOS/nixpkgs/tree/nixos-unstable/pkgs/os-specific/linux/nvidia-x11
       # that gets called from the option hardware.nvidia.package from here: https://github.com/NixOS/nixpkgs/blob/nixos-22.11/nixos/modules/hardware/video/nvidia.nix
