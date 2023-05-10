@@ -1,4 +1,4 @@
-{ /*pkgs,*/ lib, config, buildPythonPackage, ... }:
+{ pkgs, lib, config, buildPythonPackage, ... }:
 
 let
   
@@ -233,6 +233,16 @@ in
               example = /dockers;
               type = lib.types.path;
             };
+            local_ipv4 = lib.mkOption {
+              description = "your ipv4, needed for the fastapi-dls server";
+              example = "192.168.1.81";
+              type = lib.types.str;
+            };
+            timezone = lib.mkOption {
+              description = "your timezone according to this list: https://docs.diladele.com/docker/timezones.html, needs to be the same as in the VM, needed for the fastapi-dls server";
+              example = "Europe/Lisbon";
+              type = lib.types.str;
+            };
           };
         };
       };
@@ -407,8 +417,8 @@ in
           ];
           # Set environment variables
           environment = {
-            TZ = "Europe/Lisbon";
-            DLS_URL = "192.168.1.81"; # this should grab your hostname, not your IP!
+            TZ = "${cfg.fastapi-dls.timezone}";
+            DLS_URL = "${cfg.fastapi-dls.local_ipv4}"; # this should grab your hostname, not your IP!...
             DLS_PORT = "443";
             LEASE_EXPIRE_DAYS="90";
             DATABASE = "sqlite:////app/database/db.sqlite";
