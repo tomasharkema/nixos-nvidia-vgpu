@@ -1,102 +1,28 @@
-{ pkgs, lib, config, ... }:
+{ pkgs, lib, config, buildPythonPackage, ... }:
 
 let
   
   cfg = config.hardware.nvidia.vgpu;
 
-  nur = import (builtins.fetchTarball "https://github.com/nix-community/NUR/archive/master.tar.gz") {
-    inherit pkgs;
-  };
-
   mdevctl = pkgs.callPackage ./mdevctl {};
-  pythonPackages = pkgs.python38Packages;
+  #pythonPackages = pkgs.python38Packages;
   #frida = pythonPackages.callPackage ./frida {};
-
   #frida-nix = (builtins.getFlake "github:itstarsun/frida-nix"); # nix develop 'github:itstarsun/frida-nix#frida-tools'
   # frida-nix = (builtins.getFlake "github:itstarsun/frida-nix").devShells.x86_64-linux.default;
   frida = (builtins.getFlake "github:itstarsun/frida-nix").packages.x86_64-linux.frida-tools;
+  frida-py = (builtins.getFlake "github:itstarsun/frida-nix").packages.x86_64-linux.frida-python;
+
+  python-with-my-packages = pkgs.python3.withPackages (p: with p; [
+    frida
+    # pandas
+    # beautifulsoup4
+    # requests
+    # lxml
+    # pillow
+    # other python packages you want
+  ]);
+
   #python-env = frida-nix.outputs.frida-tools
-  my-python = (pythonPackages.python.withPackages (p: [ frida ]));
-
-  #frida = nur.repos.genesis.frida-tools;
-
-  # ============================================= #
-
-  default-metadata = builtins.fromJSON (builtins.readFile ./metadata.json);
-  default-overlay = mkOverlay { };
-
-/*
-  tools-version = metadata.latest-tools;
-  metadata = default-metadata;
-  version = metadata.latest-release;
-
-  frida = pythonPackages.callPackage ./frida-python {
-    inherit version;
-    src = pkgs.fetchurl metadata.releases.${version}.frida-python;
-  };
-
-  frida-tools = pythonPackages.callPackage ./frida-tools {
-    version = tools-version;
-    src = pkgs.fetchurl metadata.tools.${tools-version};
-    inherit frida;
-  }; */
-
-  frida-lib = import ./frida-nix/.;
-
-  flakeModule = ./flake-module.nix;
-
-  templates.default = {
-    path = ./templates/flake-parts;
-    description = ''
-      A template with flake-parts and frida-nix.
-    '';
-  };  
-
-  overlays.default = frida-lib.default-overlay;
-
-  frida-shit-pkgs = import (builtins.fetchTarball "https://github.com/NixOS/nixpkgs/archive/nixos-unstable.tar.gz") { };
-
-  pkgs-frida = frida-shit-pkgs.extend overlays.default;
-  frida-tools = pkgs.python3Packages.frida-tools;
-
-
-  mkOverlay =
-    { metadata ? default-metadata
-    , version ? metadata.latest-release
-    , tools-version ? metadata.latest-tools
-    }: (final: prev:
-    let
-      inherit (final) fetchurl;
-
-      mkFridaDevkit = pname:
-        final.callPackage ./frida-devkit {
-          inherit pname version;
-          src = fetchurl metadata.releases.${version}.per-system.${final.system}.${pname};
-        };
-    in
-    {
-      frida-core = mkFridaDevkit "frida-core";
-      frida-gum = mkFridaDevkit "frida-gum";
-      frida-gumjs = mkFridaDevkit "frida-gumjs";
-
-      pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
-        (python-final: python-prev: {
-          frida = python-final.callPackage ./frida-python {
-            inherit version;
-            src = fetchurl metadata.releases.${version}.frida-python;
-          };
-
-          frida-tools = python-final.callPackage ./frida-tools {
-            version = tools-version;
-            src = fetchurl metadata.tools.${tools-version};
-          };
-        })
-      ];
-
-    });
-
-
-  # ============================================= #
 
   vgpuVersion = "460.32.04";
   gridVersion = "460.32.03";
@@ -134,6 +60,114 @@ let
     sourceRoot=.
   ''; 
 
+  /*
+  mach-nix = import (builtins.fetchGit {
+    url = "https://github.com/DavHau/mach-nix";
+    ref = "refs/tags/3.5.0";
+  }) {};
+  fastapi-dls = mach-nix.buildPythonPackage {
+
+    pname = "fastapi-dls";
+    version = "1.3.5";
+
+#    src = "https://git.collinwebdesigns.de/oscar.krause/fastapi-dls/-/archive/1.3.5/fastapi-dls-1.3.5.tar.gz";
+    src = builtins.fetchGit {
+      url = "https://git.collinwebdesigns.de/oscar.krause/fastapi-dls";
+      ref = "refs/tags/1.3.5";
+    };
+
+  }; */
+/*
+  fastapi-dls = pkgs.python38Packages.buildPythonApplication {
+    pname = "fastapi-dls";
+    src = pkgs.fetchFromGitHub {
+      owner = "oscar-krause";
+      repo = "fastapi-dls";
+      rev = "14cf6a953fc46f9cafbd9818214201f6248c58b8";
+      sha256 = "";
+    };
+    buildInputs = with pkgs; [
+      git
+      python3
+      python3Packages.virtualenv
+      python3Packages.pip
+      openssl
+    ];
+    installPhase = ''
+      cd app/cert
+      openssl genrsa -out instance.private.pem 2048 
+      openssl rsa -in instance.private.pem -outform PEM -pubout -out instance.public.pem
+      openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -keyout  webserver.key -out webserver.crt
+      cd ../..
+      python3 -m venv venv
+      source venv/bin/activate
+      pip install -r requirements.txt
+      deactivate
+      mkdir -p $out/bin
+      cp -r ./* $out/bin/
+      chmod +x $out/bin/main.py
+    '';
+    meta = with pkgs.meta; {
+      description = "FastAPI-DLS - A Dynamic Lease Service with a REST API";
+      homepage = "https://git.collinwebdesigns.de/oscar.krause/fastapi-dls";
+      license = licenses.mit;
+      maintainers = [ maintainers.krausos ];
+    };
+  };
+*/
+/*
+  mach-nix = import (builtins.fetchGit {
+    url = "https://github.com/DavHau/mach-nix";
+    ref = "refs/tags/3.5.0";
+  }) {};
+
+  mypythondls = mach-nix.mkPython {  # replace with mkPythonShell if shell is wanted
+        requirements = ''
+fastapi
+uvicorn[standard]
+python-jose==3.3.0
+pycryptodome
+python-dateutil==2.8.2
+sqlalchemy
+markdown
+python-dotenv
+        '';
+      }  ;
+
+  fastapi-dls = pkgs.python38Packages.buildPythonPackage {
+    pname = "fastapi-dls";
+    version = "1.3.5";
+
+    src = pkgs.fetchFromGitLab {
+      domain = "git.collinwebdesigns.de";
+      #group = "pleroma";
+      owner = "oscar.krause";
+      repo = "fastapi-dls";
+      rev = "14cf6a953fc46f9cafbd9818214201f6248c58b8";
+      sha256 = "sha256-nxpljlOfdhYDpbgOfNTMUf9MtiaZgiOoofqEu1Cv7co=";
+    };
+
+    #src = fetchgit {
+    #  url = "git@github.com:XXXX/${pname}.git";
+    #  rev  = "XXXX";
+    #  sha256 = "XXXX";
+    #};
+
+
+   # src = pkgs.fetchurl {
+   #           name = "fastapi-dla-repo"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
+   #           url = "https://git.collinwebdesigns.de/oscar.krause/fastapi-dls/-/archive/1.3.5/fastapi-dls-1.3.5.tar.gz";
+   #           sha256 = "sha256-Ijk1er28mQjGI+IwTErJ4khV26C11cOdU5qDZ1+jdAM=";
+   #         };
+
+    buildInputs = [ mypythondls ];
+
+    shellHook = ''
+      echo ${frida}
+    '';
+  };
+  */
+
   vgpu_unlock = pkgs.stdenv.mkDerivation {
     name = "nvidia-vgpu-unlock";
     version = "unstable-2021-04-22";
@@ -153,14 +187,13 @@ let
 
     postPatch = ''
       echo ${frida}
-      python --version
+      ${pkgs.python3}/bin/python --version
       ${pkgs.unixtools.util-linux}/bin/whereis python
 
       env | grep PYTHON
-      python --version
-      python -c "import frida" && echo "frida is installed" || echo "frida is not installed"
-      
-      
+      ${pkgs.python3}/bin/python --version
+      ${pkgs.python3}/bin/python -c "import frida" && echo "frida is installed" || echo "frida is not installed"
+            
       substituteInPlace vgpu_unlock \
         --replace /bin/bash ${pkgs.bash}/bin/bash
     '';
@@ -253,9 +286,9 @@ in
 
       serviceConfig = {
         Type = "forking";
-        ExecStart = "${lib.optionalString cfg.unlock.enable "${vgpu_unlock}/bin/vgpu_unlock "}${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpud";
+        ExecStart = "${pkgs.python3}/bin/python ${lib.optionalString cfg.unlock.enable "${vgpu_unlock}/bin/vgpu_unlock "}${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpud";
         ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpud";
-        Environment = [ "__RM_NO_VERSION_CHECK=1" "_PYTHON_HOST_PLATFORM=linux-x86_64" "PYTHONNOUSERSITE=1" "PYTHONHASHSEED=0" "_PYTHON_SYSCONFIGDATA_NAME=_sysconfigdata__linux_x86_64-linux-gnu" "PYTHONPATH=/nix/store/sb4a338qh7wld75zbcgrylrpqmjnfh27-python3.10-frida-tools-12.1.1/lib/python3.10/site-packages:/nix/store/ndr7x7qhkssarrgjpqqnv8i9py4vyc9c-python3.10-colorama-0.4.6/lib/python3.10/site-packages:/nix/store/fdqpyj613dr0v1l1lrzqhzay7sk4xg87-python3-3.10.10/lib/python3.10/site-packages:/nix/store/lz6vq2kp7rww3jj6f7zgf4n50c3qvc83-python3.10-frida-16.0.18/lib/python3.10/site-packages:/nix/store/k7xyj5b5dw0cna25b91ygqskkwv8na4s-python3.10-typing-extensions-4.5.0/lib/python3.10/site-packages:/nix/store/pf9j3spzhbz7gvmbyk6a5kwcmi7zvpmy-python3.10-prompt-toolkit-3.0.38/lib/python3.10/site-packages:/nix/store/hix271phwzb157a2sj9fn5zfmkpz8zpd-python3.10-six-1.16.0/lib/python3.10/site-packages:/nix/store/khqw9ph04dvjy86rlzxzhyk21c2binhi-python3.10-wcwidth-0.2.6/lib/python3.10/site-packages:/nix/store/fpcah4a88pjj7jmwhrcvfb9kg6qj58vc-python3.10-setuptools-67.4.0/lib/python3.10/site-packages:/nix/store/asf94iynbzxraqzmbi2w69vj3khaphan-python3.10-pygments-2.14.0/lib/python3.10/site-packages:/nix/store/d8ghysrcn5nsyh9w3gvwg5kk1iyy510r-python3.10-docutils-0.19/lib/python3.10/site-packages" ]; # Avoids issue with API version incompatibility when merging host/client drivers
+        Environment = [ "__RM_NO_VERSION_CHECK=1" "PYTHONPATH=/nix/store/sb4a338qh7wld75zbcgrylrpqmjnfh27-python3.10-frida-tools-12.1.1/lib/python3.10/site-packages:/nix/store/ndr7x7qhkssarrgjpqqnv8i9py4vyc9c-python3.10-colorama-0.4.6/lib/python3.10/site-packages:/nix/store/fdqpyj613dr0v1l1lrzqhzay7sk4xg87-python3-3.10.10/lib/python3.10/site-packages:/nix/store/lz6vq2kp7rww3jj6f7zgf4n50c3qvc83-python3.10-frida-16.0.18/lib/python3.10/site-packages:/nix/store/k7xyj5b5dw0cna25b91ygqskkwv8na4s-python3.10-typing-extensions-4.5.0/lib/python3.10/site-packages:/nix/store/pf9j3spzhbz7gvmbyk6a5kwcmi7zvpmy-python3.10-prompt-toolkit-3.0.38/lib/python3.10/site-packages:/nix/store/hix271phwzb157a2sj9fn5zfmkpz8zpd-python3.10-six-1.16.0/lib/python3.10/site-packages:/nix/store/khqw9ph04dvjy86rlzxzhyk21c2binhi-python3.10-wcwidth-0.2.6/lib/python3.10/site-packages:/nix/store/fpcah4a88pjj7jmwhrcvfb9kg6qj58vc-python3.10-setuptools-67.4.0/lib/python3.10/site-packages:/nix/store/asf94iynbzxraqzmbi2w69vj3khaphan-python3.10-pygments-2.14.0/lib/python3.10/site-packages:/nix/store/d8ghysrcn5nsyh9w3gvwg5kk1iyy510r-python3.10-docutils-0.19/lib/python3.10/site-packages" ]; # Avoids issue with API version incompatibility when merging host/client drivers
       };
     };
 
@@ -267,7 +300,7 @@ in
       serviceConfig = {
         Type = "forking";
         KillMode = "process";
-        ExecStart = "${lib.optionalString cfg.unlock.enable "${vgpu_unlock}/bin/vgpu_unlock "}${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpu-mgr";
+        ExecStart = "${pkgs.python3}/bin/python ${lib.optionalString cfg.unlock.enable "${vgpu_unlock}/bin/vgpu_unlock "}${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpu-mgr";
         ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpu-mgr";
         Environment = [ "__RM_NO_VERSION_CHECK=1" "_PYTHON_HOST_PLATFORM=linux-x86_64" "PYTHONNOUSERSITE=1" "PYTHONHASHSEED=0" "_PYTHON_SYSCONFIGDATA_NAME=_sysconfigdata__linux_x86_64-linux-gnu" "PYTHONPATH=/nix/store/sb4a338qh7wld75zbcgrylrpqmjnfh27-python3.10-frida-tools-12.1.1/lib/python3.10/site-packages:/nix/store/ndr7x7qhkssarrgjpqqnv8i9py4vyc9c-python3.10-colorama-0.4.6/lib/python3.10/site-packages:/nix/store/fdqpyj613dr0v1l1lrzqhzay7sk4xg87-python3-3.10.10/lib/python3.10/site-packages:/nix/store/lz6vq2kp7rww3jj6f7zgf4n50c3qvc83-python3.10-frida-16.0.18/lib/python3.10/site-packages:/nix/store/k7xyj5b5dw0cna25b91ygqskkwv8na4s-python3.10-typing-extensions-4.5.0/lib/python3.10/site-packages:/nix/store/pf9j3spzhbz7gvmbyk6a5kwcmi7zvpmy-python3.10-prompt-toolkit-3.0.38/lib/python3.10/site-packages:/nix/store/hix271phwzb157a2sj9fn5zfmkpz8zpd-python3.10-six-1.16.0/lib/python3.10/site-packages:/nix/store/khqw9ph04dvjy86rlzxzhyk21c2binhi-python3.10-wcwidth-0.2.6/lib/python3.10/site-packages:/nix/store/fpcah4a88pjj7jmwhrcvfb9kg6qj58vc-python3.10-setuptools-67.4.0/lib/python3.10/site-packages:/nix/store/asf94iynbzxraqzmbi2w69vj3khaphan-python3.10-pygments-2.14.0/lib/python3.10/site-packages:/nix/store/d8ghysrcn5nsyh9w3gvwg5kk1iyy510r-python3.10-docutils-0.19/lib/python3.10/site-packages"];
       };
@@ -284,9 +317,9 @@ in
 
     # fastapi-dls docker service
     /*
-    sudo mkdir -p /opt/docker/fastapi-dls/cert
-
     WORKING_DIR=/opt/docker/fastapi-dls/cert
+
+    sudo mkdir -p /opt/docker/fastapi-dls/cert
     mkdir -p $WORKING_DIR
     cd $WORKING_DIR
     # create instance private and public key for singing JWT's
@@ -296,6 +329,70 @@ in
     openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -keyout  $WORKING_DIR/webserver.key -out $WORKING_DIR/webserver.crt
     */
     (lib.mkIf cfg.fastapi-dls.enable {
+
+/*
+      systemd.services.fastapi-dls = {
+        description = "fastapi-dls server";
+        wants = [ "syslog.target" ];
+        wantedBy = [ "multi-user.target" ];
+
+        serviceConfig = {
+          User = "www-data";
+          Group = "www-data";
+          AmbientCapabilities = [ "CAP_NET_BIND_SERVICE" ];
+          WorkingDirectory = "${fastapi-dls}/app";
+          EnvironmentFile = "${fastapi-dls}/env";
+          ExecStart = "${fastapi-dls}/venv/bin/uvicorn main:app \\\n  --env-file /etc/fastapi-dls/env \\\n  --host \$DLS_URL --port \$DLS_PORT \\\n  --app-dir ${fastapi-dls}/app \\\n  --ssl-keyfile ${fastapi-dls}/app/cert/webserver.key \\\n  --ssl-certfile ${fastapi-dls}/app/cert/webserver.crt \\\n  --proxy-headers";
+          Restart = "always";
+          KillSignal = "SIGQUIT";
+          Type = "simple";
+          NotifyAccess = "all";
+        };
+      };
+      */
+
+
+      # environment.systemPackages = [ fastapi-dls ];
+
+/*
+      lib.shellHook = ''
+        WORKING_DIR=${cfg.fastapi-dls.docker-directory}/fastapi-dls/cert  # default: /opt/docker/fastapi-dls/cert
+
+        çasojdkasop
+
+        sudo mkdir -p $WORKING_DIR
+        mkdir -p $WORKING_DIR
+        cd $WORKING_DIR
+        # create instance private and public key for singing JWT's
+        ${pkgs.openssl.bin}/bin/openssl genrsa -out $WORKING_DIR/instance.private.pem 2048 
+        ${pkgs.openssl.bin}/bin/openssl rsa -in $WORKING_DIR/instance.private.pem -outform PEM -pubout -out $WORKING_DIR/instance.public.pem
+        # create ssl certificate for integrated webserver (uvicorn) - because clients rely on ssl
+        ${pkgs.openssl.bin}/bin/openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -keyout  $WORKING_DIR/webserver.key -out $WORKING_DIR/webserver.crt
+      '';
+ */
+
+      /*
+      systemd.services."certificates-for-fastapi-dls" = {
+        description = "certificates-for-fastapi-dls";
+        wants = [ "syslog.target" ];
+        wantedBy = [ "multi-user.target" ];
+
+        serviceConfig = {
+          Type = "forking";
+          ExecStart = ''
+            WORKING_DIR=${cfg.fastapi-dls.docker-directory}/fastapi-dls/cert  # default: /opt/docker/fastapi-dls/cert
+
+            mkdir -p $WORKING_DIR
+            cd $WORKING_DIR
+            # create instance private and public key for singing JWT's
+            ${pkgs.openssl.bin}/bin/openssl genrsa -out $WORKING_DIR/instance.private.pem 2048 
+            ${pkgs.openssl.bin}/bin/openssl rsa -in $WORKING_DIR/instance.private.pem -outform PEM -pubout -out $WORKING_DIR/instance.public.pem
+            # create ssl certificate for integrated webserver (uvicorn) - because clients rely on ssl
+            ${pkgs.openssl.bin}/bin/openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -keyout  $WORKING_DIR/webserver.key -out $WORKING_DIR/webserver.crt
+          '';
+        };
+      }; */
+
       virtualisation.oci-containers.containers = {
         fastapi-dls = {
           image = "collinwebdesigns/fastapi-dls:latest";
