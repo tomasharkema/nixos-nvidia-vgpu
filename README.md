@@ -85,7 +85,7 @@ Example usage:
 For more help visit the [Join VGPU-Unlock discord for Support](https://discord.com/invite/5rQsSV3Byq), for help related to nixOS, tag me (Jonnas#1835)
 
 ## Requirements
-This has been teste with the kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 22.11.20230428.7449971`
+This has been tested with the kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 22.11.20230428.7449971`
 
 ## Additional Notes
 To test if everything is installed correctly run `nvidia-smi vgpu`. If there is no output something went wrong with the installation.
