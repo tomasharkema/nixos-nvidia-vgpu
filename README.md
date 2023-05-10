@@ -5,10 +5,19 @@ Example usage:
 {
   # Optionally replace "master" with a particular revision to pin this dependency.
   # This repo also provides the module in a "Nix flake" under `nixosModules.nvidia-vgpu` output
-  imports = [ (builtins.fetchTarball "https://github.com/danielfullmer/nixos-nvidia-vgpu/archive/master.tar.gz") ];
+  imports = [ (builtins.fetchTarball "https://github.com/Yeshey/nixos-nvidia-vgpu_nixOS22.11_WIP/archive/master.tar.gz") ];
 
-  hardware.nvidia.vgpu.enable = true; # Enable NVIDIA KVM vGPU + GRID driver
-  hardware.nvidia.vgpu.unlock.enable = true; # Unlock vGPU functionality on consumer cards using DualCoder/vgpu_unlock project.
+  hardware.nvidia = {
+    vgpu = {
+      enable = true; # Install NVIDIA KVM vGPU + GRID merged driver for consumer cards with vgpu unlocked.
+      unlock.enable = true; # Activates systemd services to enable vGPU functionality on using DualCoder/vgpu_unlock project.
+      fastapi-dls = { # For the license server
+        enable = true;
+        local_ipv4 = "192.168.1.81"; # Your local IP
+        timezone = "Europe/Lisbon"; # Your timezone (needs to be the same as the tz in the VM)
+      };
+    };
+  };
 }
 ```
 This currently creates a merged driver from the KVM + GRID drivers for using native desktop + VM guest simultaneously.
@@ -29,3 +38,6 @@ $ sudo mdevctl start -u 2d3a3f00-633f-48d3-96f0-17466845e672 -p 0000:03:00.0 --t
 `nvidia-51` is the code for "GRID P40-8Q" in vgpuConfig.xml
 ```shell
 $ sudo mdevctl define --auto --uuid 2d3a3f00-633f-48d3-96f0-17466845e672
+```
+
+## Disclaimer and contributions
