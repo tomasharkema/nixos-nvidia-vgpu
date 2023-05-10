@@ -28,6 +28,14 @@ let
     buildInputs = [ frida ];
 
     postPatch = ''
+      echo ${frida}
+      ${pkgs.python3}/bin/python --version
+      ${pkgs.unixtools.util-linux}/bin/whereis python
+
+      env | grep PYTHON
+      ${pkgs.python3}/bin/python --version
+      ${pkgs.python3}/bin/python -c "import frida" && echo "frida is installed" || echo "frida is not installed"
+
       substituteInPlace vgpu_unlock \
         --replace /bin/bash ${pkgs.bash}/bin/bash
     '';
