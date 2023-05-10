@@ -20,8 +20,8 @@ Example usage:
   };
 }
 ```
-This currently creates a merged driver from the KVM + GRID drivers for using native desktop + VM guest simultaneously.
-The merging stuff should probably be optional.
+This currently downlaods and installes a merged driver that I built.
+
 
 ## Requirements
 This module currently only works with a NixOS `>= 21.05` which has the `hardware.nvidia.package` option (Added in January 2021).
