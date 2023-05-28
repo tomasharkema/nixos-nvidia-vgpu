@@ -185,6 +185,8 @@ python-dotenv
     installPhase = ''
       mkdir -p $out/bin
       cp vgpu_unlock $out/bin/
+      substituteInPlace $out/bin/vgpu_unlock \
+              --replace /bin/bash ${pkgs.bash}/bin/bash
     '';
 
     #installFlags = [ "--install-scripts=$out/bin" ];
