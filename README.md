@@ -36,8 +36,31 @@ Example usage:
     ```
     This currently downlaods and installs a merged driver that I built, gets it from my google drive.
 3. Run `nixos-rebuild switch`. 
-    
-For more help visit the [Join VGPU-Unlock discord for Support](https://discord.com/invite/5rQsSV3Byq), for help related to nixOS, tag me (Jonnas#1835)
+
+## Guest VM
+
+### Windows
+
+In the Windows VM you need to install the appropriate drivers too, if you use a A profile for example (from the `mdevctl types` command) you can use the normal driver from the [nvidia licensing server](#nvidia-drivers), if you want a Q profile ([difference between profiles](https://youtu.be/cPrOoeMxzu0?t=1244)), you're gonna need to get the driver from the [nvidia servers](#nvidia-drivers) and patch it with the [community vgpu unlock repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher).
+
+That [didn't work for me either](https://discord.com/channels/829786927829745685/830520513834516530/1109199157299793970) tho, so I had to use the special `GeForce RTX 2070-` profiles (from `mdevctl types`) and a special driver for the VM, [this one](https://nvidia-gaming.s3.us-east-1.amazonaws.com/windows/528.49_Cloud_Gaming_win10_win11_server2019_server2022_dch_64bit_international.exe).  
+Here is the explenation of where that driver is from:
+> vGaming is specially licensed.  
+> there's no trial and you need to buy a compute cluster from nuhvidya.  
+> But Amazon has this and they host the drivers for people to use.  
+> The link comes from their bucket that has the vGaming drivers
+
+### nvidia-drivers
+
+To get the nvidia vgpu drivers: downloads are available from nvidia site [here](http://nvid.nvidia.com/dashboard/), evaluation account may be obtained [here](http://www.nvidia.com/object/vgpu-evaluation.html)  
+For guest drivers for windows get the ones with the name `Microsoft Hyper-V Server`  
+To check and match versions see [here](https://docs.nvidia.com/grid/index.html). For example:
+| vGPU Software | Linux vGPU Manager | Windows vGPU Manager | Linux Driver | Windows Driver | Release Date |
+|--------------|-------------------|---------------------|--------------|----------------|--------------|
+| 15.2         | 525.105.14        | 528.89              | 525.105.17   | 528.89         | March 2023   |
+| 15.1         | 525.85.07         | 528.24              | 525.85.05    | 528.24         | January 2023 |
+| 15.0         | 525.60.12         | 527.41              | 525.60.13    | 527.41         | December 2022|
+
 
 ## Requirements
 This has been tested with the kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 22.11.20230428.7449971`
@@ -69,6 +92,17 @@ check if they were created successfully with `mdevctl list`
 ce851576-7e81-46f1-96e1-718da691e53e 0000:01:00.0 nvidia-258 (defined)
 b761f485-1eac-44bc-8ae6-2a3569881a1a 0000:01:00.0 nvidia-258 (defined)
 ```
+
+Also you can change the resolution and other parameters of a profile directly in the vgpu config xml, so you can mod for example a A profile as you need, just need to reboot to get the changes loaded (or reload all the stuff)
+
+## To-Do
+
+- Fix issues below
+- Make a full guide for begginers on how to make virt-manager, looking-glass, windows VM with vgpu unlock in nixOS
+
+---
+
+For more help visit the [Join VGPU-Unlock discord for Support](https://discord.com/invite/5rQsSV3Byq), for help related to nixOS, tag me (Jonnas#1835)
 
 ## Disclaimer and contributions
 
