@@ -35,14 +35,6 @@ let
       substituteInPlace $out/bin/vgpu_unlock \
               --replace /bin/bash ${pkgs.bash}/bin/bash
     '';
-
-    #installFlags = [ "--install-scripts=$out/bin" ];
-    #installTargets = [ "vgpu_unlock" ];
-
-    #postInstall = ''
-    #  substituteInPlace $out/bin/vgpu_unlock \
-    #    --replace /bin/bash ${pkgs.bash}/bin/bash
-    #'';
   };
 in
 {
