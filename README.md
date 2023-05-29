@@ -50,6 +50,50 @@ Here is the explenation of where that driver is from:
 > But Amazon has this and they host the drivers for people to use.  
 > The link comes from their bucket that has the vGaming drivers
 
+### Looking Glass
+
+You can add [this module](https://github.com/NixOS/nixpkgs/blob/63c34abfb33b8c579631df6b5ca00c0430a395df/nixos/modules/programs/looking-glass.nix) to your nixOS configuration, I don't think it's in nixpkgs yet, so you can import it like this:
+```nix
+imports = [
+  (import (builtins.fetchurl{
+        url = "https://github.com/NixOS/nixpkgs/raw/63c34abfb33b8c579631df6b5ca00c0430a395df/nixos/modules/programs/looking-glass.nix";
+        sha256 = "sha256:1lfrqix8kxfawnlrirq059w1hk3kcfq4p8g6kal3kbsczw90rhki";
+      } ))
+];
+```
+
+Then you can active it like this:
+
+```nix
+  programs.looking-glass = {
+    enable = true;
+  };
+```
+
+If your looking glass version currently in nixpkgs is below B6, I advise you to get at least the [B6 version](https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/virtualization/looking-glass-client/default.nix), to also have sound transfered over:
+
+```nix
+  programs.looking-glass = let
+    # Looking glass B6 version in nixpkgs: 
+    myPkgs = import (builtins.fetchTarball {
+        url = "https://github.com/NixOS/nixpkgs/archive/9fa5c1f0a85f83dfa928528a33a28f063ae3858d.tar.gz";
+    }) {};
+
+    LookingGlassB6 = myPkgs.looking-glass-client;
+  in {
+    enable = true;
+    package = LookingGlassB6;
+  };
+```
+
+#### Debug
+
+If it gives a permission error like this:
+```
+[E]    242844972           ivshmem.c:159  | ivshmemOpenDev                 | Permission denied
+```
+You can fix it for the current session with `sudo chmod 777 /dev/shm/looking-glass`
+
 ### nvidia-drivers
 
 To get the nvidia vgpu drivers: downloads are available from nvidia site [here](http://nvid.nvidia.com/dashboard/), evaluation account may be obtained [here](http://www.nvidia.com/object/vgpu-evaluation.html)  
@@ -79,6 +123,8 @@ Test also `mdevctl types`, if there is no output, maybe your graphics isn't supp
 
 You can also check if the services `nvidia-vgpu-mgr` and `nvidia-vgpud` executed without errors with `systemctl status nvidia-vgpud` and `systemctl status nvidia-vgpu-mgr`. (or something like `journalctl -fu nvidia-vgpud` to see the logs in real time)
 
+If you set up fastapi-dls correctly, you should get a notification when your windows VM starts saying "nvidia license aquiered"
+
 I've tested creating an mdev on my own `NVIDIA GeForce RTX 2060 Mobile` by running:
 ```bash
 > sudo su
@@ -103,7 +149,7 @@ Also you can change the resolution and other parameters of a profile directly in
 
 ---
 
-For more help visit the [Join VGPU-Unlock discord for Support](https://discord.com/invite/5rQsSV3Byq), for help related to nixOS, tag me (Jonnas#1835)
+For more help [Join VGPU-Unlock discord for Support](https://discord.com/invite/5rQsSV3Byq), for help related to nixOS, tag me (Jonnas#1835)
 
 ## Disclaimer and contributions
 
