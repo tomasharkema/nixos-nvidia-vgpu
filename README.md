@@ -35,7 +35,7 @@ Example usage:
     }
     ```
     This currently downlaods and installs a merged driver that I built, gets it from my google drive.
-3. Run `nixos-rebuild switch`. 
+3. Run `nixos-rebuild switch --impure`. (unfortunatley it still needs --impure to run, see issues) 
 
 ## Guest VM
 
@@ -111,6 +111,9 @@ I'm not an experienced nix developer and a lot of whats implemented here could b
 
 I have these questions on the nixOS discourse that reflect the biggest problems with this module as of now:
 - Commands need to be ran manually for the docker volume to work: (no issue created yet)
+- Needs `--impure` to run.
+  - `error: cannot call 'getFlake' on unlocked flake reference 'github:itstarsun/frida-nix'`, because of the line:
+  - `  frida = (builtins.getFlake "github:itstarsun/frida-nix").packages.x86_64-linux.frida-tools;`
 - ~~Hard coded nix store paths: https://discourse.nixos.org/t/how-to-use-python-environment-in-a-systemd-service/28022~~ (fixed!)
 
 This was heavily based and inspiered in these two repositories:
