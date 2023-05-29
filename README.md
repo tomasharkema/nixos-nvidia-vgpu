@@ -99,6 +99,7 @@ Also you can change the resolution and other parameters of a profile directly in
 
 - Fix issues below
 - Make a full guide for begginers on how to make virt-manager, looking-glass, windows VM with vgpu unlock in nixOS
+- Make it get the files it neesd from <https://archive.biggerthanshit.com/> and compile the merged driver that it will install with the [community vgpu repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher), instead of grabbing the prebuilt version from your google drive.
 
 ---
 
