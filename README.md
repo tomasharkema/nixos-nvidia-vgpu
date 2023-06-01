@@ -94,6 +94,17 @@ If it gives a permission error like this:
 ```
 You can fix it for the current session with `sudo chmod 777 /dev/shm/looking-glass`
 
+If it gives a reerr like this:
+```
+Invalid value provided to the option: app:shmFile
+
+ Error: Invalid path to the ivshmem file specified
+
+Valid values are:
+```
+
+then `sudo touch /dev/shm/looking-glass` and `sudo chmod 777 /dev/shm/looking-glass` and THEN start the VM. If the VM was already running you'll need to reboot and try to run looking glass before starting the VM.
+
 ### nvidia-drivers
 
 To get the nvidia vgpu drivers: downloads are available from nvidia site [here](http://nvid.nvidia.com/dashboard/), evaluation account may be obtained [here](http://www.nvidia.com/object/vgpu-evaluation.html)  
