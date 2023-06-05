@@ -194,7 +194,7 @@ in
           # Set environment variables
           environment = {
             TZ = "${cfg.fastapi-dls.timezone}";
-            DLS_URL = "${cfg.fastapi-dls.local_ipv4}"; # this should grab your hostname, not your IP!...
+            DLS_URL = "${cfg.fastapi-dls.local_ipv4}"; # this should grab your hostname or your IP!
             DLS_PORT = "443";
             LEASE_EXPIRE_DAYS="90";
             DATABASE = "sqlite:////app/database/db.sqlite";
