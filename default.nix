@@ -210,5 +210,27 @@ in
       };
     })
 
+    /* Something you can do to automate getting the your local IP:
+      https://discourse.nixos.org/t/for-nixos-on-aws-ec2-how-to-get-ip-address/15616/12?u=yeshey
+
+      With something like:
+        environmentFiles = lib.mkOption {
+          description = "enviroonmentFiles for docker";
+          default = [];
+          example = ["/my-ip"];
+          type = lib.arr lib.types.path;
+        };
+
+      systemd.services.my-awesome-service = {
+        description = "writes a file to /my-ip";
+        serviceConfig.PassEnvironment = "DISPLAY";
+        script = ''
+          echo "DLS_URL=$(${pkgs.busybox}/bin/ip a | grep "scope" | grep -Po '(?<=inet )[\d.]+' | head -n 2 | tail -n 1)" > /my-ip;
+          echo "success!"
+        '';
+        wantedBy = [ "multi-user.target" ]; # starts after login
+      };
+     */
+
   ];
 }
