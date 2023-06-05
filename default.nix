@@ -1,4 +1,4 @@
-{ pkgs, lib, config, buildPythonPackage, ... }:
+fridaFlake: { pkgs, lib, config, buildPythonPackage, ... }:
 
 let
   
@@ -10,7 +10,7 @@ let
   cfg = config.hardware.nvidia.vgpu;
 
   mdevctl = pkgs.callPackage ./mdevctl {};
-  frida = (builtins.getFlake "github:itstarsun/frida-nix").packages.x86_64-linux.frida-tools;
+  frida = fridaFlake.packages.${pkgs.system}.frida-tools;
 
   myVgpuVersion = "525.105.14";
   

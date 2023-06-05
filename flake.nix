@@ -1,7 +1,9 @@
 {
   description = "NixOS module which provides NVIDIA vGPU functionality";
 
-  outputs = { self }: {
-    nixosModules.nvidia-vgpu = import ./default.nix ;
+  inputs.frida.url = "github:itstarsun/frida-nix";
+
+  outputs = { self, frida }: {
+    nixosModules.nvidia-vgpu = import ./default.nix frida;
   };
 }
