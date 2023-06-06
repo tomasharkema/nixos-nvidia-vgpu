@@ -1,5 +1,7 @@
 # NixOS NVIDIA vGPU Module
 
+This module unlocks vGPU functionality on your consumer nvidia card.
+
 Example usage:
 1. run these commands for docker to work (needed if you'll enable `fastapi-dls`):
    ```bash
@@ -19,7 +21,7 @@ Example usage:
     {
       # Optionally replace "master" with a particular revision to pin this dependency.
       # This repo also provides the module in a "Nix flake" under `nixosModules.nvidia-vgpu` output
-      imports = [ (builtins.fetchTarball "https://github.com/Yeshey/nixos-nvidia-vgpu_nixOS22.11_WIP/archive/master.tar.gz") ];
+      imports = [ (builtins.fetchTarball "https://github.com/Yeshey/nixos-nvidia-vgpu_nixOS/archive/master.tar.gz") ];
 
       hardware.nvidia = {
         vgpu = {
@@ -38,8 +40,8 @@ Example usage:
 3. Run `nixos-rebuild switch --impure`. (unfortunatley it still needs --impure to run, see issues) 
 
 ## Requirements
-- This has been tested with the kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 22.11.20230428.7449971`
-- Also tested with the kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 23.05`
+- This has been tested with the kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 22.11.20230428.7449971`. If you're in nixOS 22.11, you'll need to grab the commit with the tag `v22.11`, so you'd get from this link instead: `(builtins.fetchTarball "https://github.com/Yeshey/nixos-nvidia-vgpu_nixOS/archive/refs/tags/v22.11.tar.gz")`
+- Also tested with the kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 23.05`.
 
 ## Guest VM
 
