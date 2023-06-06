@@ -14,7 +14,7 @@ let
 
   myVgpuVersion = "525.105.14";
   
-  vgpu_unlock = pkgs.python3Packages.buildPythonPackage {
+  vgpu_unlock = pkgs.python310Packages.buildPythonPackage {
     pname = "nvidia-vgpu-unlock";
     version = "unstable-2021-04-22";
 
@@ -25,7 +25,7 @@ let
       sha256 = "sha256-K7e/9q7DmXrrIFu4gsTv667bEOxRn6nTJYozP1+RGHs=";
     };
 
-    propagatedBuildInputs = [ frida ];
+    propagatedBuildInputs = [ "python3.10-frida-tools-12.1.2" ];
     
     doCheck = false; # Disable running checks during the build
     
@@ -98,7 +98,7 @@ in
               sha256 = "sha256-g8BM1g/tYv3G9vTKs581tfSpjB6ynX2+FaIOyFcDfdI=";
             };
 
-      postPatch = postPatch + ''
+      postPatch = ''
         # Move path for vgpuConfig.xml into /etc
         sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
 
