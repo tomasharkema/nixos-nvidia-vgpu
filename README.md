@@ -37,6 +37,10 @@ Example usage:
     This currently downlaods and installs a merged driver that I built, gets it from my google drive.
 3. Run `nixos-rebuild switch --impure`. (unfortunatley it still needs --impure to run, see issues) 
 
+## Requirements
+- This has been tested with the kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 22.11.20230428.7449971`
+- Also tested with the kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 23.05`
+
 ## Guest VM
 
 ### Windows
@@ -189,10 +193,6 @@ To check and match versions see [here](https://docs.nvidia.com/grid/index.html).
 | 15.2         | 525.105.14        | 528.89              | 525.105.17   | 528.89         | March 2023   |
 | 15.1         | 525.85.07         | 528.24              | 525.85.05    | 528.24         | January 2023 |
 | 15.0         | 525.60.12         | 527.41              | 525.60.13    | 527.41         | December 2022|
-
-
-## Requirements
-This has been tested with the kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 22.11.20230428.7449971`
 
 ## Additional Notes
 To test if everything is installed correctly run `nvidia-smi vgpu`. If there is no output something went wrong with the installation.  
