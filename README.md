@@ -242,9 +242,10 @@ I'm not an experienced nix developer and a lot of whats implemented here could b
 
 I have these questions on the nixOS discourse that reflect the biggest problems with this module as of now:
 - Commands need to be ran manually for the docker volume to work: (no issue created yet)
-- Needs `--impure` to run.
-  - `error: cannot call 'getFlake' on unlocked flake reference 'github:itstarsun/frida-nix'`, because of the line:
-  - `  frida = (builtins.getFlake "github:itstarsun/frida-nix").packages.x86_64-linux.frida-tools;`
+- Still needs `--impure`: `access to absolute path '/opt/docker' is forbidden in pure eval mode (use '--impure' to override)`
+- ~~Needs `--impure` to run.~~
+  - ~~`error: cannot call 'getFlake' on unlocked flake reference 'github:itstarsun/frida-nix'`, because of the line:~~
+  - ~~`frida = (builtins.getFlake "github:itstarsun/frida-nix").packages.x86_64-linux.frida-tools;`~~ (fixed, [thanks](https://discourse.nixos.org/t/for-nixos-on-aws-ec2-how-to-get-ip-address/15616/12?u=yeshey)!)
 - ~~Hard coded nix store paths: https://discourse.nixos.org/t/how-to-use-python-environment-in-a-systemd-service/28022~~ (fixed!)
 
 This was heavily based and inspiered in these two repositories:
