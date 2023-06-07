@@ -14,6 +14,7 @@ let
 
   myVgpuVersion = "525.105.14";
   
+  # maybe take a look at https://discourse.nixos.org/t/how-to-add-custom-python-package/536/4
   vgpu_unlock = pkgs.python310Packages.buildPythonPackage {
     pname = "nvidia-vgpu-unlock";
     version = "unstable-2021-04-22";
@@ -25,7 +26,7 @@ let
       sha256 = "sha256-K7e/9q7DmXrrIFu4gsTv667bEOxRn6nTJYozP1+RGHs=";
     };
 
-    propagatedBuildInputs = [ "python3.10-frida-tools-12.1.2" ];
+    nativeBuildInputs = [ frida ];
     
     doCheck = false; # Disable running checks during the build
     
@@ -98,7 +99,14 @@ in
               sha256 = "sha256-g8BM1g/tYv3G9vTKs581tfSpjB6ynX2+FaIOyFcDfdI=";
             };
 
-      postPatch = ''
+      postPatch = if postPatch != null then postPatch + ''
+        # Move path for vgpuConfig.xml into /etc
+        sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
+
+        substituteInPlace sriov-manage \
+          --replace lspci ${pkgs.pciutils}/bin/lspci \
+          --replace setpci ${pkgs.pciutils}/bin/setpci
+      '' else ''
         # Move path for vgpuConfig.xml into /etc
         sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
 
@@ -106,6 +114,16 @@ in
           --replace lspci ${pkgs.pciutils}/bin/lspci \
           --replace setpci ${pkgs.pciutils}/bin/setpci
       '';
+
+      /*
+      postPatch = postPatch + ''
+        # Move path for vgpuConfig.xml into /etc
+        sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
+
+        substituteInPlace sriov-manage \
+          --replace lspci ${pkgs.pciutils}/bin/lspci \
+          --replace setpci ${pkgs.pciutils}/bin/setpci
+      ''; */
 
       # HACK: Using preFixup instead of postInstall since nvidia-x11 builder.sh doesn't support hooks
       preFixup = preFixup + ''
