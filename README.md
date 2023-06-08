@@ -68,11 +68,7 @@ Example usage:
 
 ### Warning: 
 
-The current version in the `master` branch only works in version `23.05` of nixOS. For version `22.11` or older, please refer below.
-
-#### `22.11` or older
-
-- If you're in nixOS 22.11, you'll need to grab the commit with the tag `v22.11`, so you'd get from this link instead: `(builtins.fetchTarball "https://github.com/Yeshey/nixos-nvidia-vgpu_nixOS/archive/refs/tags/v22.11.tar.gz")`
+The current version in the `master` branch only works in version `23.05` of nixOS and older. If you're on `unstable` please refer below:
  
 #### `unstable`
  
