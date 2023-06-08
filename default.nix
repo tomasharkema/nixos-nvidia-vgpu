@@ -26,7 +26,7 @@ let
       sha256 = "sha256-K7e/9q7DmXrrIFu4gsTv667bEOxRn6nTJYozP1+RGHs=";
     };
 
-    nativeBuildInputs = [ frida ];
+    propagatedBuildInputs = [ frida ];
     
     doCheck = false; # Disable running checks during the build
     

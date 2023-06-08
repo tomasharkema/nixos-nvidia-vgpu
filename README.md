@@ -40,8 +40,24 @@ Example usage:
 3. Run `nixos-rebuild switch --impure`. (unfortunatley it still needs --impure to run, see issues) 
 
 ## Requirements
-- This has been tested with the kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 22.11.20230428.7449971`. If you're in nixOS 22.11, you'll need to grab the commit with the tag `v22.11`, so you'd get from this link instead: `(builtins.fetchTarball "https://github.com/Yeshey/nixos-nvidia-vgpu_nixOS/archive/refs/tags/v22.11.tar.gz")`
-- Also tested with the kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 23.05`.
+
+### Warning: 
+
+The current version in the `master` branch only works in version `23.05` of nixOS. For version `22.11` or older, please refer below.
+
+#### `22.11` or older
+
+- If you're in nixOS 22.11, you'll need to grab the commit with the tag `v22.11`, so you'd get from this link instead: `(builtins.fetchTarball "https://github.com/Yeshey/nixos-nvidia-vgpu_nixOS/archive/refs/tags/v22.11.tar.gz")`
+ 
+#### `unstable`
+ 
+- To make this module work in unstable, you'll have to clone the repo and change in the file `flake.nix` the line: `inputs.frida.url = "github:Yeshey/frida-nix";` to `inputs.frida.url = "github:itstarsun/frida-nix";`.  
+  The original repository that provides frida tools already works with the unstable channel.
+
+### Tested in
+
+- kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 22.11.20230428.7449971`. 
+- kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 23.05.20230605.70f7275`.
 
 ## Guest VM
 
