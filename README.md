@@ -23,6 +23,7 @@ Example usage:
       # This repo also provides the module in a "Nix flake" under `nixosModules.nvidia-vgpu` output
       imports = [ (builtins.fetchTarball "https://github.com/Yeshey/nixos-nvidia-vgpu_nixOS/archive/master.tar.gz") ];
 
+      boot.kernelPackages = pkgs.linuxPackages_5_15; # Requires this kernel to work
       hardware.nvidia = {
         vgpu = {
           enable = true; # Install NVIDIA KVM vGPU + GRID merged driver for consumer cards with vgpu unlocked.
@@ -36,7 +37,7 @@ Example usage:
       };
     }
     ```
-    This currently downlaods and installs a merged driver that I built, gets it from my google drive.
+    This currently downlaods and installs a merged driver that I built, gets it from my google drive. And requires kernel `5.15`.
 3. Run `nixos-rebuild switch --impure`. (unfortunatley it still needs --impure to run, see issues) 
 
 ## Requirements
