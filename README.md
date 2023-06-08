@@ -42,6 +42,30 @@ Example usage:
 
 ## Requirements
 
+- Unlockable consumer NVIDIA GPU card (can't be `Ampere` architecture)
+  - These are the graphics cards the driver I pre-compiled supports: ([from here](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher/blob/525.105/patch.sh))
+    ```
+      # RTX 2070 super 8GB
+      # RTX 2080 super 8GB
+      # RTX 2060 12GB
+      # RTX 2060 Mobile 6GB
+      # GTX 1660 6GB
+      # GTX 1650 Ti Mobile 4GB
+      # Quadro RTX 4000
+      # Quadro T400 4GB
+      # GTX 1050 Ti 4GB
+      # GTX 1070
+      # GTX 1030 -> Tesla P40
+      # Tesla M40 -> Tesla M60
+      # GTX 980 -> Tesla M60
+      # GTX 980M -> Tesla M60
+      # GTX 950M -> Tesla M10
+    ```
+    If yours is not in this list, you'll likely have to add support for your graphics card and compile the driver, please refer to [Compile your driver](#compile-your-driver).
+- Trust in my google drive
+  - The module lazily grabs the driver I pre-built from my google drive, if you're not confortable with this, please refer to [Compile your driver](#compile-your-driver) to compile your own driver and use it.
+- Kernel `5.15` as stated above
+
 ### Warning: 
 
 The current version in the `master` branch only works in version `23.05` of nixOS. For version `22.11` or older, please refer below.
@@ -64,7 +88,7 @@ The current version in the `master` branch only works in version `23.05` of nixO
 
 ### Windows
 
-In the Windows VM you need to install the appropriate drivers too, if you use a A profile for example (from the `mdevctl types` command) you can use the normal driver from the [nvidia licensing server](#nvidia-drivers), if you want a Q profile ([difference between profiles](https://youtu.be/cPrOoeMxzu0?t=1244)), you're gonna need to get the driver from the [nvidia servers](#nvidia-drivers) and patch it with the [community vgpu unlock repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher).
+In the Windows VM you need to install the appropriate drivers too, if you use a A profile([difference between profiles](https://youtu.be/cPrOoeMxzu0?t=1244)) for example (from the `mdevctl types` command) you can use the normal driver from the [nvidia licensing server](#nvidia-drivers), if you want a Q profile, you're gonna need to get the driver from the [nvidia servers](#nvidia-drivers) and patch it with the [community vgpu unlock repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher).
 
 That [didn't work for me either](https://discord.com/channels/829786927829745685/830520513834516530/1109199157299793970) tho, so I had to use the special `GeForce RTX 2070-` profiles (from `mdevctl types`) and a special driver for the VM, [this one](https://nvidia-gaming.s3.us-east-1.amazonaws.com/windows/528.49_Cloud_Gaming_win10_win11_server2019_server2022_dch_64bit_international.exe).  
 Here is the explenation of where that driver is from:
@@ -85,7 +109,7 @@ imports = [
 ];
 ```
 
-Then you can active it like this:
+Then you can activate it like this:
 
 ```nix
   programs.looking-glass = {
@@ -189,7 +213,7 @@ Take a look at the following configuration to realise that:
   };
   networking.firewall.allowPing = true;
   services.samba.openFirewall = true;
-  # However, for this samba share to work you will need to run `sudo smbpasswd -a <yourusername>` after building your configuration!
+  # However, for this samba share to work you will need to run `sudo smbpasswd -a <yourusername>` after building your configuration! (as stated in the nixOS wiki for samba: https://nixos.wiki/wiki/Samba)
   # In windows you can access them in file explorer with `\\192.168.1.xxx` or whatever your local IP is
   # In Windowos you should also map them to a drive to use them in a lot of programs, for this:
   #   - Add a file MapNetworkDriveDataDisk and MapNetworkDriveHdd-ntfs to the folder C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup (to be accessible to every user in every startup):
@@ -201,6 +225,17 @@ Take a look at the following configuration to realise that:
 ```
 
 As explained in the comments in the above code you'll have to mount the network drives in windows.
+
+I also advise you to make your local IP static, to prevent windows from loosing access to those folder because of IP changes:
+
+```nix
+  # For sharing folders with the windows VM
+  # Make your local IP static for the VM to never lose the folders
+  networking.interfaces.eth0.ipv4.addresses = [ {
+    address = "192.168.1.109";
+    prefixLength = 24;
+  } ];
+```
 
 ### nvidia-drivers
 
@@ -214,16 +249,9 @@ To check and match versions see [here](https://docs.nvidia.com/grid/index.html).
 | 15.0         | 525.60.12         | 527.41              | 525.60.13    | 527.41         | December 2022|
 
 ## Additional Notes
+
 To test if everything is installed correctly run `nvidia-smi vgpu`. If there is no output something went wrong with the installation.  
-Test also `mdevctl types`, if there is no output, maybe your graphics isn't supported yet, maybe you need to add a `vcfgclone` line as per [this repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher). If that is the case, you'll need to recompile the driver with the new `vcfgclone`, upload it somewhere, and change the src to grab your driver instead:
-```nix
-  # the new driver (getting from my Google drive)
-  src = pkgs.fetchurl {
-          name = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
-          url = "https://drive.google.com/u/1/uc?id=17NN0zZcoj-uY2BELxY2YqGvf6KtZNXhG&export=download&confirm=t&uuid=e2729c36-3bb7-4be6-95b0-08e06eac55ce&at=AKKF8vzPeXmt0W_pxHE9rMqewfXY:1683158182055";
-          sha256 = "sha256-g8BM1g/tYv3G9vTKs581tfSpjB6ynX2+FaIOyFcDfdI=";
-        };
-```
+Test also `mdevctl types`, if there is no output, maybe your graphics card isn't supported yet, you'll need to add a `vcfgclone` line as per [this repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher). If that is the case, you'll need to recompile the driver with the new `vcfgclone`, upload it somewhere, and change the src to grab your driver instead. Refer to [Compile your driver](#compile-your-driver)
 
 You can also check if the services `nvidia-vgpu-mgr` and `nvidia-vgpud` executed without errors with `systemctl status nvidia-vgpud` and `systemctl status nvidia-vgpu-mgr`. (or something like `journalctl -fu nvidia-vgpud` to see the logs in real time)
 
@@ -244,6 +272,24 @@ b761f485-1eac-44bc-8ae6-2a3569881a1a 0000:01:00.0 nvidia-258 (defined)
 ```
 
 Also you can change the resolution and other parameters of a profile directly in the vgpu config xml, so you can mod for example a A profile as you need, just need to reboot to get the changes loaded (or reload all the stuff)
+
+## Compile your driver
+
+If you don't trust my Google drive pre built driver, or if it doesn't have support for your graphics card yet, you'll need to compile the driver:
+
+1. Refer to the [vGPU community repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher) to compile your own driver. If your graphics card isn't supported you'll likely have to add a `vcfgclone` in patch.sh of their repository as per their instructions.
+   1. I compiled it in another OS(manjaro in my case), as nixOS proved to be harder.
+2. Upload your driver somewhere, for example, google drive 
+3. Download or clone this repo and change the following line to point to the download link of your new driver instead. You might also have to change the `sha256`
+    ```nix
+      # the new driver (getting from my Google drive)
+      src = pkgs.fetchurl {
+              name = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
+              url = "https://drive.google.com/u/1/uc?id=17NN0zZcoj-uY2BELxY2YqGvf6KtZNXhG&export=download&confirm=t&uuid=e2729c36-3bb7-4be6-95b0-08e06eac55ce&at=AKKF8vzPeXmt0W_pxHE9rMqewfXY:1683158182055";
+              sha256 = "sha256-g8BM1g/tYv3G9vTKs581tfSpjB6ynX2+FaIOyFcDfdI=";
+            };
+    ```
+4. In your configuration point to this new module instead.
 
 ## To-Do
 
