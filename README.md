@@ -218,6 +218,7 @@ Take a look at the following configuration to realise that:
   #      and
   #         net use V: "\\192.168.1.109\hdd-ntfs" /p:yes
   # Then to have those drives be usable by administrator programs, open a cmd with priviliges and also run both commands above! This might be needed if you want to for example install a game in them, see this reddit post: https://www.reddit.com/r/uplay/comments/tww5ey/any_way_to_install_games_to_a_network_drive/
+  # You can make them always be mounted with admin too, through the Task Schedueler > New Task > Tick "Run as admin" and add the path to the script as a program (could be the one in C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup)
 ```
 
 As explained in the comments in the above code you'll have to mount the network drives in windows.
