@@ -61,8 +61,8 @@ in
             };
             docker-directory = lib.mkOption {
               description = "Path to your folder with docker containers";
-              default = /opt/docker;
-              example = /dockers;
+              default = "/opt/docker";
+              example = "/dockers";
               type = lib.types.path;
             };
             local_ipv4 = lib.mkOption {
