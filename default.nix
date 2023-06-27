@@ -1,4 +1,4 @@
-fridaFlake: { pkgs, lib, config, buildPythonPackage, ... }:
+{ pkgs, lib, config, ... }:
 
 let
   gnrl-driver-version = "525.105.17";
@@ -19,31 +19,7 @@ let
   cfg = config.hardware.nvidia.vgpu;
 
   mdevctl = pkgs.callPackage ./mdevctl {};
-  frida = fridaFlake.packages.${pkgs.system}.frida-tools;
-  
-  # maybe take a look at https://discourse.nixos.org/t/how-to-add-custom-python-package/536/4
-  vgpu_unlock = pkgs.python310Packages.buildPythonPackage {
-    pname = "nvidia-vgpu-unlock";
-    version = "unstable-2021-04-22";
 
-    src = pkgs.fetchFromGitHub {
-      owner = "Yeshey";
-      repo = "vgpu_unlock";
-      rev = "7db331d4a2289ff6c1fb4da50cf445d9b4227421";
-      sha256 = "sha256-K7e/9q7DmXrrIFu4gsTv667bEOxRn6nTJYozP1+RGHs=";
-    };
-
-    propagatedBuildInputs = [ frida ];
-    
-    doCheck = false; # Disable running checks during the build
-    
-    installPhase = ''
-      mkdir -p $out/bin
-      cp vgpu_unlock $out/bin/
-      substituteInPlace $out/bin/vgpu_unlock \
-              --replace /bin/bash ${pkgs.bash}/bin/bash
-    '';
-  };
   compiled-driver = pkgs.stdenv.mkDerivation rec{
     name = "driver-compile";
       nativeBuildInputs = [ pkgs.p7zip pkgs.coreutils];
@@ -93,12 +69,6 @@ in
   options = {
     hardware.nvidia.vgpu = {
       enable = lib.mkEnableOption "vGPU support";
-
-      unlock.enable = lib.mkOption {
-        default = false;
-        type = lib.types.bool;
-        description = "Unlock vGPU functionality for consumer grade GPUs";
-      };
 
       # submodule
       fastapi-dls = lib.mkOption {
@@ -197,11 +167,7 @@ in
 
       serviceConfig = {
         Type = "forking";
-        ExecStart = lib.strings.concatStringsSep " " [
-          # Won't this just break if cfg.unlock.enable = false?
-          (lib.optionalString cfg.unlock.enable "${vgpu_unlock}/bin/vgpu_unlock")
-          "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpud"
-        ];
+        ExecStart = "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpud";
         ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpud";
         Environment = [ "__RM_NO_VERSION_CHECK=1" ]; # Avoids issue with API version incompatibility when merging host/client drivers
       };
@@ -215,11 +181,7 @@ in
       serviceConfig = {
         Type = "forking";
         KillMode = "process";
-        ExecStart = lib.strings.concatStringsSep " " [
-          # Won't this just break if cfg.unlock.enable = false?
-          (lib.optionalString cfg.unlock.enable "${vgpu_unlock}/bin/vgpu_unlock")
-          "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpu-mgr"
-        ];
+        ExecStart = "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpu-mgr";
         ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpu-mgr";
         Environment = [ "__RM_NO_VERSION_CHECK=1"];
       };
