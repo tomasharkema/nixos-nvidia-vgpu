@@ -174,10 +174,10 @@ in
 
       # HACK: Using preFixup instead of postInstall since nvidia-x11 builder.sh doesn't support hooks
       preFixup = preFixup + ''
-        for i in libnvidia-vgpu.so.${gnrl-driver-version} libnvidia-vgxcfg.so.${gnrl-driver-version}; do
+        for i in libnvidia-vgpu.so.${vgpu-driver-version} libnvidia-vgxcfg.so.${vgpu-driver-version}; do
           install -Dm755 "$i" "$out/lib/$i"
         done
-        patchelf --set-rpath ${pkgs.stdenv.cc.cc.lib}/lib $out/lib/libnvidia-vgpu.so.${gnrl-driver-version}
+        patchelf --set-rpath ${pkgs.stdenv.cc.cc.lib}/lib $out/lib/libnvidia-vgpu.so.${vgpu-driver-version}
         install -Dm644 vgpuConfig.xml $out/vgpuConfig.xml
 
         for i in nvidia-vgpud nvidia-vgpu-mgr; do
