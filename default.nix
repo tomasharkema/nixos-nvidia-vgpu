@@ -145,7 +145,7 @@ in
       version = "${myVgpuVersion}";
 
       # the new driver (compiled in a derivation above)
-      src = compiled-driver
+      src = compiled-driver;
 
       postPatch = if postPatch != null then postPatch + ''
         # Move path for vgpuConfig.xml into /etc
