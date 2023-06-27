@@ -63,7 +63,7 @@ in
               description = "Path to your folder with docker containers";
               default = "/opt/docker";
               example = "/dockers";
-              type = lib.types.path;
+              type = lib.types.str;
             };
             local_ipv4 = lib.mkOption {
               description = "your ipv4, needed for the fastapi-dls server";
