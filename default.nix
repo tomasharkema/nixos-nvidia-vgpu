@@ -59,7 +59,7 @@ let
         };
         original = pkgs.fetchurl {
           url = "https://download.nvidia.com/XFree86/Linux-x86_64/${gnrl-driver-version}/NVIDIA-Linux-x86_64-${gnrl-driver-version}.run";
-          sha256 = "0ahlb1x59g7055vdkm4lifb6llsb1x5bdsqrbx4576rc50da4df6"
+          sha256 = "0ahlb1x59g7055vdkm4lifb6llsb1x5bdsqrbx4576rc50da4df6";
         };
         zip1 = pkgs.fetchurl {
           url = "https://github.com/justin-himself/NVIDIA-VGPU-Driver-Archive/releases/download/${grid-version}/NVIDIA-GRID-Linux-KVM-${vgpu-driver-version}-${grid-driver-version}-${wdys-driver-version}.7z.001";
