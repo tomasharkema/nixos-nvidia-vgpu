@@ -20,8 +20,6 @@ let
 
   mdevctl = pkgs.callPackage ./mdevctl {};
   frida = fridaFlake.packages.${pkgs.system}.frida-tools;
-
-  myVgpuVersion = "${vgpu-driver-version}";
   
   # maybe take a look at https://discourse.nixos.org/t/how-to-add-custom-python-package/536/4
   vgpu_unlock = pkgs.python310Packages.buildPythonPackage {
@@ -142,8 +140,8 @@ in
       { patches ? [], postUnpack ? "", postPatch ? "", preFixup ? "", ... }@attrs: {
       # Overriding https://github.com/NixOS/nixpkgs/tree/nixos-unstable/pkgs/os-specific/linux/nvidia-x11
       # that gets called from the option hardware.nvidia.package from here: https://github.com/NixOS/nixpkgs/blob/nixos-22.11/nixos/modules/hardware/video/nvidia.nix
-      name = "NVIDIA-Linux-x86_64-${myVgpuVersion}-merged-vgpu-kvm-patched-${config.boot.kernelPackages.kernel.version}";
-      version = "${myVgpuVersion}";
+      name = "NVIDIA-Linux-x86_64-${gnrl-driver-version}-merged-vgpu-kvm-patched-${config.boot.kernelPackages.kernel.version}";
+      version = "${gnrl-driver-version}";
 
       # the new driver (compiled in a derivation above)
       src = "${compiled-driver}/NVIDIA-Linux-x86_64-${gnrl-driver-version}-merged-vgpu-kvm-patched.run";
@@ -176,10 +174,10 @@ in
 
       # HACK: Using preFixup instead of postInstall since nvidia-x11 builder.sh doesn't support hooks
       preFixup = preFixup + ''
-        for i in libnvidia-vgpu.so.${myVgpuVersion} libnvidia-vgxcfg.so.${myVgpuVersion}; do
+        for i in libnvidia-vgpu.so.${gnrl-driver-version} libnvidia-vgxcfg.so.${gnrl-driver-version}; do
           install -Dm755 "$i" "$out/lib/$i"
         done
-        patchelf --set-rpath ${pkgs.stdenv.cc.cc.lib}/lib $out/lib/libnvidia-vgpu.so.${myVgpuVersion}
+        patchelf --set-rpath ${pkgs.stdenv.cc.cc.lib}/lib $out/lib/libnvidia-vgpu.so.${gnrl-driver-version}
         install -Dm644 vgpuConfig.xml $out/vgpuConfig.xml
 
         for i in nvidia-vgpud nvidia-vgpu-mgr; do
