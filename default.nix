@@ -7,7 +7,7 @@ let
   grid-driver-version = "525.105.17";
   wdys-driver-version = "528.89";
   grid-version = "15.2";
-  kernel-at-least-6 = lib.strings.versionAtLeast config.boot.kernelPackages.kernel.version "6.0";
+  kernel-at-least-6 = if lib.strings.versionAtLeast config.boot.kernelPackages.kernel.version "6.0" then "true" else "false";
 in
 let
   
