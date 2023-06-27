@@ -145,7 +145,7 @@ in
       version = "${myVgpuVersion}";
 
       # the new driver (compiled in a derivation above)
-      src = compiled-driver;
+      src = "${compiled-driver}/NVIDIA-Linux-x86_64-${gnrl-driver-version}-merged-vgpu-kvm-patched.run";
 
       postPatch = if postPatch != null then postPatch + ''
         # Move path for vgpuConfig.xml into /etc
