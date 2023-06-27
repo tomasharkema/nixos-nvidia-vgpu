@@ -2,12 +2,12 @@ fridaFlake: { pkgs, lib, config, buildPythonPackage, ... }:
 
 let
   gnrl-driver-version = "525.105.17";
-	# grid driver and wdys driver aren't actually used, but their versions are needed to find some filenames
-	vgpu-driver-version = "525.105.14";
-	grid-driver-version = "525.105.17";
-	wdys-driver-version = "528.89";
-	grid-version = "15.2";
-  kernel-at-least-6 = versionAtLeast config.boot.kernelPackages.kernel.version "6.0"
+  # grid driver and wdys driver aren't actually used, but their versions are needed to find some filenames
+  vgpu-driver-version = "525.105.14";
+  grid-driver-version = "525.105.17";
+  wdys-driver-version = "528.89";
+  grid-version = "15.2";
+  kernel-at-least-6 = versionAtLeast config.boot.kernelPackages.kernel.version "6.0";
 in
 let
   
