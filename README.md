@@ -4,7 +4,7 @@ This module unlocks vGPU functionality on your consumer nvidia card.
 
 Example usage:
 
-1. Add https://github.com/physics-enthusiast/nixos-nvidia-vgpu to the inputs of your system flake. For an introduction to flakes, see [here](https://nixos.wiki/wiki/Flakes).
+1. Add this repo to the inputs of your system flake. For an introduction to flakes, see [here](https://nixos.wiki/wiki/Flakes).
 
 2. Add this to your nixOS configuration:
    
