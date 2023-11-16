@@ -30,6 +30,7 @@ let
           rev = "e5288921f79b28590caec6b5249bcac92b6641cb";
           sha256 = "0qcwn9yx0rd7zksmq1blp5rjzhlzci1rs0bifpsa9ly0rh3xdh75";
           fetchSubmodules = true;
+          deepClone = true;
         };
         original_driver_src = pkgs.fetchurl {
           url = "https://download.nvidia.com/XFree86/Linux-x86_64/${driver-version}/NVIDIA-Linux-x86_64-${driver-version}.run";
