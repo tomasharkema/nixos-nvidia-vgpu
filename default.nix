@@ -28,17 +28,17 @@ let
           repo = "vGPU-Unlock-patcher";
           # 535.129
           rev = "e5288921f79b28590caec6b5249bcac92b6641cb";
-          sha256 = "0qcwn9yx0rd7zksmq1blp5rjzhlzci1rs0bifpsa9ly0rh3xdh75";
+          hash = "0qcwn9yx0rd7zksmq1blp5rjzhlzci1rs0bifpsa9ly0rh3xdh75";
           fetchSubmodules = true;
           deepClone = true;
         };
         original_driver_src = pkgs.fetchurl {
           url = "https://download.nvidia.com/XFree86/Linux-x86_64/${driver-version}/NVIDIA-Linux-x86_64-${driver-version}.run";
-          sha256 = "17av8nvxzn5af3x6y8vy5g6zbwg21s7sq5vpa1xc6cx8yj4mc9xm";
+          hash = "17av8nvxzn5af3x6y8vy5g6zbwg21s7sq5vpa1xc6cx8yj4mc9xm";
         };
         vgpu_driver_src = pkgs.fetchurl {
           url = "https://github.com/justin-himself/NVIDIA-VGPU-Driver-Archive/releases/download/${grid-version}/NVIDIA-GRID-Linux-KVM-${driver-version}-${wdys-driver-version}.zip";
-          sha256 = "1x0xcn8lk6q53z7rdyv785x0xl0z5mx581kmy96qzfnim2ac22sn";
+          hash = "1x0xcn8lk6q53z7rdyv785x0xl0z5mx581kmy96qzfnim2ac22sn";
         };
         buildPhase = ''
           mkdir -p $out
