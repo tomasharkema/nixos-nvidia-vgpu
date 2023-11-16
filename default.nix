@@ -34,11 +34,11 @@ let
         };
         original_driver_src = pkgs.fetchurl {
           url = "https://download.nvidia.com/XFree86/Linux-x86_64/${driver-version}/NVIDIA-Linux-x86_64-${driver-version}.run";
-          hash = "sha256-17av8nvxzn5af3x6y8vy5g6zbwg21s7sq5vpa1xc6cx8yj4mc9xm";
+          sha256 = "e6dca5626a2608c6bb2a046cfcb7c1af338b9e961a7dd90ac09bb8a126ff002e";
         };
         vgpu_driver_src = pkgs.fetchurl {
           url = "https://github.com/justin-himself/NVIDIA-VGPU-Driver-Archive/releases/download/${grid-version}/NVIDIA-GRID-Linux-KVM-${driver-version}-${wdys-driver-version}.zip";
-          hash = "sha256-1x0xcn8lk6q53z7rdyv785x0xl0z5mx581kmy96qzfnim2ac22sn";
+          sha256 = "b458037fb652219464bc898efbd62096b2e298624c67f7f3db9823513d137c3a";
         };
         buildPhase = ''
           mkdir -p $out
