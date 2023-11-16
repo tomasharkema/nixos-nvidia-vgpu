@@ -28,7 +28,7 @@ let
           repo = "vGPU-Unlock-patcher";
           # 535.129
           rev = "e5288921f79b28590caec6b5249bcac92b6641cb";
-          hash = "sha256-0qcwn9yx0rd7zksmq1blp5rjzhlzci1rs0bifpsa9ly0rh3xdh75";
+          sha256 = "0qcwn9yx0rd7zksmq1blp5rjzhlzci1rs0bifpsa9ly0rh3xdh75";
           fetchSubmodules = true;
           deepClone = true;
         };
