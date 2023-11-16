@@ -27,7 +27,7 @@ let
           owner = "VGPU-Community-Drivers";
           repo = "vGPU-Unlock-patcher";
           # 535.129
-          rev = "e5288921f79b28590caec6b5249bcac92b6641cb";
+          ref = "535.129";
           sha256 = "e5288921f79b28590caec6b5249bcac92b6641cb";
           fetchSubmodules = true;
           deepClone = true;
