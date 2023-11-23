@@ -55,6 +55,8 @@ let
           else
              sh ./patch.sh --repack general-merge 
           fi
+          ls -la
+          pwd
           cp -a NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched.run $out
         '';
   };
