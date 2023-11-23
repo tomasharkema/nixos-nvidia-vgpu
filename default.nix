@@ -21,7 +21,7 @@ let
 
   compiled-driver = pkgs.stdenv.mkDerivation rec{
     name = "driver-compile";
-      nativeBuildInputs = [ pkgs.p7zip pkgs.unzip pkgs.coreutils];
+      nativeBuildInputs = [ pkgs.p7zip pkgs.unzip pkgs.coreutils pkgs.bash pkgs.zstd];
         system = "x86_64-linux";
         src = pkgs.fetchFromGitHub {
           owner = "VGPU-Community-Drivers";
