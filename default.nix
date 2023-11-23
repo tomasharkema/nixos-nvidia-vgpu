@@ -47,7 +47,6 @@ let
           ln -s $vgpu_driver_src NVIDIA-GRID-Linux-KVM-${driver-version}-${wdys-driver-version}.zip
           
           ${pkgs.unzip}/bin/unzip -j NVIDIA-GRID-Linux-KVM-${driver-version}-${wdys-driver-version}.zip Host_Drivers/NVIDIA-Linux-x86_64-${driver-version}-vgpu-kvm.run
-          cp -a $original_driver_src NVIDIA-Linux-x86_64-${driver-version}.run
           cp -a $src/* .
           
           if ${kernel-at-least-6}; then
