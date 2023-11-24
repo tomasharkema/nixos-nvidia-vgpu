@@ -11,7 +11,7 @@ let
 in
 let
   # UNCOMMENT this to pin the version of pkgs if this stops working
-  pkgs = import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/06278c77b5d162e62df170fec307e83f1812d94b.tar.gz") {
+  python-pkgs = import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/06278c77b5d162e62df170fec307e83f1812d94b.tar.gz") {
     config.allowUnfree = true;
   };
 
@@ -56,7 +56,7 @@ let
         '';
   };
 
-  vgpu_unlock = pkgs.python310Packages.buildPythonPackage {
+  vgpu_unlock = python-pkgs.python310Packages.buildPythonPackage {
     pname = "nvidia-vgpu-unlock";
     version = "unstable-2021-04-22";
 
