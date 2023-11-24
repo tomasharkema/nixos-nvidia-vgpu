@@ -186,14 +186,8 @@ in
 
       serviceConfig = {
         Type = "forking";
-        ExecStart = lib.strings.concatStringsSep " " [
-          # Won't this just break if cfg.unlock.enable = false?
-          (lib.optionalString cfg.unlock.enable "${vgpu_unlock}/bin/vgpu_unlock")
-          "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpud"
-        ];
+        ExecStart = "${vgpu_unlock}/bin/vgpu_unlock ${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpud";
         ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpud";
-        # ExecStart = "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpud";
-        # ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpud";
         Environment = [ "__RM_NO_VERSION_CHECK=1" ]; # Avoids issue with API version incompatibility when merging host/client drivers
       };
     };
@@ -206,7 +200,7 @@ in
       serviceConfig = {
         Type = "forking";
         KillMode = "process";
-        ExecStart = "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpu-mgr";
+        ExecStart = "${vgpu_unlock}/bin/vgpu_unlock ${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpu-mgr";
         ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpu-mgr";
         Environment = [ "__RM_NO_VERSION_CHECK=1"];
       };
