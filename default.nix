@@ -18,7 +18,7 @@ let
   cfg = config.hardware.nvidia.vgpu;
 
   mdevctl = pkgs.callPackage ./mdevctl {};
-  frida = (builtins.getFlake "github:itstarsun/frida-nix").packages.x86_64-linux.frida-tools;
+  frida = (builtins.getFlake "github:Yeshey/frida-nix").packages.x86_64-linux.frida-tools;
   
   compiled-driver = pkgs.stdenv.mkDerivation rec{
     name = "driver-compile";
