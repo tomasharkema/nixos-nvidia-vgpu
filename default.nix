@@ -25,11 +25,11 @@ let
       nativeBuildInputs = [ pkgs.p7zip pkgs.unzip pkgs.coreutils pkgs.bash pkgs.zstd];
         system = "x86_64-linux";
         src = pkgs.fetchFromGitHub {
-          owner = "VGPU-Community-Drivers";
+          owner = "letmeiiiin";
           repo = "vGPU-Unlock-patcher";
           # 535.129
-          rev = "e5288921f79b28590caec6b5249bcac92b6641cb";
-          hash = "sha256-QlVLMreZ20W1QodS1cqUOdlcZ4e361UeKcfWn/Eu7/A=";
+          rev = "9a8100c71c4bf97f4e0658d2824d18def0ac846d";
+          hash = "";
           fetchSubmodules = true;
           deepClone = true;
         };
