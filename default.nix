@@ -18,7 +18,8 @@ let
   cfg = config.hardware.nvidia.vgpu;
 
   mdevctl = pkgs.callPackage ./mdevctl {};
-
+  frida = (builtins.getFlake "github:itstarsun/frida-nix").packages.x86_64-linux.frida-tools;
+  
   compiled-driver = pkgs.stdenv.mkDerivation rec{
     name = "driver-compile";
       nativeBuildInputs = [ pkgs.p7zip pkgs.unzip pkgs.coreutils pkgs.bash pkgs.zstd];
@@ -66,7 +67,7 @@ let
       sha256 = "sha256-K7e/9q7DmXrrIFu4gsTv667bEOxRn6nTJYozP1+RGHs=";
     };
 
-    propagatedBuildInputs = [ pkgs.frida-tools ];
+    propagatedBuildInputs = [ frida ];
     
     doCheck = false; # Disable running checks during the build
     
