@@ -303,7 +303,7 @@ For more help [Join VGPU-Unlock discord for Support](https://discord.com/invite/
 I'm not an experienced nix developer and a lot of whats implemented here could be done in a better way. If anyone is interested in contributing, you may get in contact through the issues or my email (yesheysangpo@gmail.com) or simply make a pull request with details as to what it changes.
 
 I have these questions on the nixOS discourse that reflect the biggest problems with this module as of now:
-- Commands need to be ran manually for the docker volume to work: (no issue created yet)
+- Commands need to be ran manually for the docker volume to work: (Fixed in development branch by [physics-enthusiast](https://github.com/physics-enthusiast), pending merge)
 - Still needs `--impure`: `access to absolute path '/opt/docker' is forbidden in pure eval mode (use '--impure' to override)`
 - ~~Needs `--impure` to run.~~
   - ~~`error: cannot call 'getFlake' on unlocked flake reference 'github:itstarsun/frida-nix'`, because of the line:~~
