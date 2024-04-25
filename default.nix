@@ -1,20 +1,24 @@
-fridaFlake: { pkgs, lib, config, buildPythonPackage, ... }:
+{ pkgs, lib, config, ... }:
 
 let
   # UNCOMMENT this to pin the version of pkgs if this stops working
-  #pkgs = import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/06278c77b5d162e62df170fec307e83f1812d94b.tar.gz") {
-  #    # config.allowUnfree = true;
-  #};
+  python-pkgs = import (fetchTarball {
+        url = "https://github.com/NixOS/nixpkgs/archive/06278c77b5d162e62df170fec307e83f1812d94b.tar.gz";
+        sha256 = "sha256:11ri51840scvy9531rbz32241l7l81sa830s90wpzvv86v276aqs";
+    }) {
+    config.allowUnfree = true;
+  };
 
   cfg = config.hardware.nvidia.vgpu;
 
   mdevctl = pkgs.callPackage ./mdevctl {};
-  frida = fridaFlake.packages.${pkgs.system}.frida-tools;
+  frida = (builtins.getFlake "github:Yeshey/frida-nix").packages.x86_64-linux.frida-tools;
+  #frida = fridaFlake.packages.${pkgs.system}.frida-tools;
 
   myVgpuVersion = "525.105.14";
   
   # maybe take a look at https://discourse.nixos.org/t/how-to-add-custom-python-package/536/4
-  vgpu_unlock = pkgs.python310Packages.buildPythonPackage {
+  vgpu_unlock = python-pkgs.python310Packages.buildPythonPackage {
     pname = "nvidia-vgpu-unlock";
     version = "unstable-2021-04-22";
 
@@ -86,6 +90,22 @@ in
   config = lib.mkMerge [
 
  (lib.mkIf cfg.enable {
+
+    # pin the kernel version before they applied a breaking patch: https://discourse.nixos.org/t/cant-update-nvidia-driver-on-stable-branch/39246/16
+    nixpkgs.overlays = [ (self: super: (let
+    patched_pkgs = import (fetchTarball {
+            url = "github:nixos/nixpkgs/468a37e6ba01c45c91460580f345d48ecdb5a4db";
+            sha256 = "sha256:11ri51840scvy9531rbz32241l7l81sa830s90wpzvv86v276aqs";
+        }) {
+        inherit (self) system;
+        config.allowUnfree = true;
+      };
+    in {
+      forVgpuLinuxPackages_5_15 = patched_pkgs.linuxPackages_5_15;
+    })) ];
+    #boot.kernelPackages = pkgs.linuxPackages;
+    boot.kernelPackages = pkgs.forVgpuLinuxPackages_5_15; # needed for this linuxPackages_5_19
+  
     hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable.overrideAttrs ( # CHANGE stable to legacy_470 to pin the version of the driver if it stops working
       { patches ? [], postUnpack ? "", postPatch ? "", preFixup ? "", ... }@attrs: {
       # Overriding https://github.com/NixOS/nixpkgs/tree/nixos-unstable/pkgs/os-specific/linux/nvidia-x11
@@ -96,7 +116,7 @@ in
       # the new driver (getting from my Google drive)
       src = pkgs.fetchurl {
               name = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
-              url = "https://drive.google.com/u/1/uc?id=17NN0zZcoj-uY2BELxY2YqGvf6KtZNXhG&export=download&confirm=t&uuid=e2729c36-3bb7-4be6-95b0-08e06eac55ce&at=AKKF8vzPeXmt0W_pxHE9rMqewfXY:1683158182055";
+              url = "https://drive.usercontent.google.com/download?id=17NN0zZcoj-uY2BELxY2YqGvf6KtZNXhG&export=download&authuser=0&confirm=t&uuid=b70e0e36-34df-4fde-a86b-4d41d21ce483&at=APZUnTUfGnSmFiqhIsCNKQjPLEk3%3A1714043345939";
               sha256 = "sha256-g8BM1g/tYv3G9vTKs581tfSpjB6ynX2+FaIOyFcDfdI=";
             };
 
