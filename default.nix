@@ -2,7 +2,7 @@
 
 let
   # UNCOMMENT this to pin the version of pkgs if this stops working
-  python-pkgs = import (fetchTarball {
+  pkgs = import (fetchTarball {
         url = "https://github.com/NixOS/nixpkgs/archive/06278c77b5d162e62df170fec307e83f1812d94b.tar.gz";
         sha256 = "sha256:11ri51840scvy9531rbz32241l7l81sa830s90wpzvv86v276aqs";
     }) {
@@ -18,7 +18,7 @@ let
   myVgpuVersion = "525.105.14";
   
   # maybe take a look at https://discourse.nixos.org/t/how-to-add-custom-python-package/536/4
-  vgpu_unlock = python-pkgs.python310Packages.buildPythonPackage {
+  vgpu_unlock = pkgs.python310Packages.buildPythonPackage {
     pname = "nvidia-vgpu-unlock";
     version = "unstable-2021-04-22";
 
@@ -89,7 +89,17 @@ in
 
   config = lib.mkMerge [
 
- (lib.mkIf cfg.enable {
+ ( let
+ 
+
+    patched_pkgs = import (fetchTarball {
+        url = "github:nixos/nixpkgs/468a37e6ba01c45c91460580f345d48ecdb5a4db";
+        sha256 = "sha256:11ri51840scvy9531rbz32241l7l81sa830s90wpzvv86v276aqs";
+    }) {
+    config.allowUnfree = true;
+  };
+
+ in lib.mkIf cfg.enable {
 
     # pin the kernel version before they applied a breaking patch: https://discourse.nixos.org/t/cant-update-nvidia-driver-on-stable-branch/39246/16
     nixpkgs.overlays = [ (self: super: (let
@@ -103,8 +113,10 @@ in
     in {
       forVgpuLinuxPackages_5_15 = patched_pkgs.linuxPackages_5_15;
     })) ];
+
+
     #boot.kernelPackages = pkgs.linuxPackages;
-    boot.kernelPackages = pkgs.forVgpuLinuxPackages_5_15; # needed for this linuxPackages_5_19
+    boot.kernelPackages = patched_pkgs.linuxPackages_5_15; # needed for this linuxPackages_5_19
   
     hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable.overrideAttrs ( # CHANGE stable to legacy_470 to pin the version of the driver if it stops working
       { patches ? [], postUnpack ? "", postPatch ? "", preFixup ? "", ... }@attrs: {
@@ -189,13 +201,9 @@ in
       serviceConfig = {
         Type = "forking";
         KillMode = "process";
-        ExecStart = lib.strings.concatStringsSep " " [
-          # Won't this just break if cfg.unlock.enable = false?
-          (lib.optionalString cfg.unlock.enable "${vgpu_unlock}/bin/vgpu_unlock")
-          "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpu-mgr"
-        ];
+        ExecStart = "${vgpu_unlock}/bin/vgpu_unlock ${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpu-mgr";
         ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpu-mgr";
-        Environment = [ "__RM_NO_VERSION_CHECK=1"];
+        Environment = [ "__RM_NO_VERSION_CHECK=1" "LF_PRELOAD=" "LD_LIBRARY_PATH="];
       };
     };
 
