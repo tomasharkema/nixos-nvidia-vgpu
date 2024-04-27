@@ -1,32 +1,13 @@
 inputs: { pkgs, lib, config, ... }:
 
 let
-  # UNCOMMENT this to pin the version of pkgs if this stops working
   # Using the pinned packages because these two problems arrose in the latest packages:
   # version `GLIBC_2.38' not found when trying to run the VM in nvidia-vgpu-mgr.service, maybe related to https://github.com/NixOS/nixpkgs/issues/287764
   # boot.kernelPackages = patched_pkgs.linuxPackages_5_15 gave this error: https://discourse.nixos.org/t/cant-update-nvidia-driver-on-stable-branch/39246
-  # if not using a flake, add default.nix as a module, use these following linnes, and run with --impure
-  
-/*
-  pkgs = import (fetchTarball {
-        url = "https://github.com/NixOS/nixpkgs/archive/06278c77b5d162e62df170fec307e83f1812d94b.tar.gz";
-        sha256 = "sha256:11ri51840scvy9531rbz32241l7l81sa830s90wpzvv86v276aqs";
-    }) {
-      #inherit (pkgs.stdenv.hostPlatform) system;
-    config.allowUnfree = true;
-  };  */
-  # frida = (builtins.getFlake "github:Yeshey/frida-nix").packages.x86_64-linux.frida-tools;
-
-  # pkgs = inputs.nixpkgs;
 
   inherit (pkgs.stdenv.hostPlatform) system;
 
-
-
   cfg = config.hardware.nvidia.vgpu;
-
-  #pkgs = inputs.nixpkgs.legacyPackages.x86_64-linux;
-  #inputs.nixpkgs
 
   patchedPkgs = import (fetchTarball {
         url = "https://github.com/NixOS/nixpkgs/archive/06278c77b5d162e62df170fec307e83f1812d94b.tar.gz";
@@ -37,14 +18,11 @@ let
   };
 
   mdevctl = patchedPkgs.callPackage ./mdevctl {};
-  #frida = (builtins.getFlake "github:Yeshey/frida-nix").packages.${system}.frida-tools;
+  #frida = (builtins.getFlake "github:Yeshey/frida-nix").packages.${system}.frida-tools; # if not using a flake, you can use this with --impure
   frida = inputs.frida.packages.${system}.frida-tools;
 
   myVgpuVersion = "525.105.14";
-  
-  # UNCOMMENT this to pin the version of pkgs if this stops working
-  
-  # maybe take a look at https://discourse.nixos.org/t/how-to-add-custom-python-package/536/4
+    
   vgpu_unlock = patchedPkgs.python310Packages.buildPythonPackage {
     pname = "nvidia-vgpu-unlock";
     version = "unstable-2021-04-22";
@@ -56,7 +34,6 @@ let
       sha256 = "sha256-K7e/9q7DmXrrIFu4gsTv667bEOxRn6nTJYozP1+RGHs=";
     };
 
-    # nativeBuildInputs
     propagatedBuildInputs = [ frida ];
     
     doCheck = false; # Disable running checks during the build
@@ -123,22 +100,6 @@ in
 
  in lib.mkIf cfg.enable {
 
-    # pin the kernel version before they applied a breaking patch: https://discourse.nixos.org/t/cant-update-nvidia-driver-on-stable-branch/39246/16
-    /*
-    nixpkgs.overlays = [ (self: super: (let
-    patched_pkgs = import (fetchTarball {
-            url = "github:nixos/nixpkgs/468a37e6ba01c45c91460580f345d48ecdb5a4db";
-            sha256 = "sha256:11ri51840scvy9531rbz32241l7l81sa830s90wpzvv86v276aqs";
-        }) {
-        inherit (self) system;
-        config.allowUnfree = true;
-      };
-    in {
-      forVgpuLinuxPackages_5_15 = patched_pkgs.linuxPackages_5_15;
-    })) ]; */
-
-
-    #boot.kernelPackages = pkgs.linuxPackages;
     boot.kernelPackages = patchedPkgs.linuxPackages_5_15; # needed for this linuxPackages_5_19
   
     hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable.overrideAttrs ( # CHANGE stable to legacy_470 to pin the version of the driver if it stops working

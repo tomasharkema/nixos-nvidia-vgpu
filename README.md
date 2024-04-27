@@ -293,8 +293,7 @@ If you don't trust my Google drive pre built driver, or if it doesn't have suppo
 - Fix issues below
 - Make a full guide for begginers on how to make virt-manager, looking-glass, windows VM with vgpu unlock in nixOS
 - Make it get the files it neesd from <https://archive.biggerthanshit.com/> and compile the merged driver that it will install with the [community vgpu repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher), instead of grabbing the prebuilt version from your google drive.
-
----
+- Bring pinned pkgs to flake inputs and make frida follow it, issue: https://github.com/Yeshey/nixos-nvidia-vgpu/issues/4
 
 For more help [Join VGPU-Unlock discord for Support](https://discord.com/invite/5rQsSV3Byq), for help related to nixOS, tag me (Jonnas#1835)
 
