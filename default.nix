@@ -1,34 +1,62 @@
-{ pkgs, lib, config, ... }:
+inputs: { pkgs, lib, config, ... }:
 
 let
   # UNCOMMENT this to pin the version of pkgs if this stops working
+  # Using the pinned packages because these two problems arrose in the latest packages:
+  # version `GLIBC_2.38' not found when trying to run the VM in nvidia-vgpu-mgr.service, maybe related to https://github.com/NixOS/nixpkgs/issues/287764
+  # boot.kernelPackages = patched_pkgs.linuxPackages_5_15 gave this error: https://discourse.nixos.org/t/cant-update-nvidia-driver-on-stable-branch/39246
+  # if not using a flake, add default.nix as a module, use these following linnes, and run with --impure
+  
+/*
   pkgs = import (fetchTarball {
         url = "https://github.com/NixOS/nixpkgs/archive/06278c77b5d162e62df170fec307e83f1812d94b.tar.gz";
         sha256 = "sha256:11ri51840scvy9531rbz32241l7l81sa830s90wpzvv86v276aqs";
     }) {
+      #inherit (pkgs.stdenv.hostPlatform) system;
     config.allowUnfree = true;
-  };
+  };  */
+  # frida = (builtins.getFlake "github:Yeshey/frida-nix").packages.x86_64-linux.frida-tools;
+
+  # pkgs = inputs.nixpkgs;
+
+  inherit (pkgs.stdenv.hostPlatform) system;
+
+
 
   cfg = config.hardware.nvidia.vgpu;
 
-  mdevctl = pkgs.callPackage ./mdevctl {};
-  frida = (builtins.getFlake "github:Yeshey/frida-nix").packages.x86_64-linux.frida-tools;
-  #frida = fridaFlake.packages.${pkgs.system}.frida-tools;
+  #pkgs = inputs.nixpkgs.legacyPackages.x86_64-linux;
+  #inputs.nixpkgs
+
+  patchedPkgs = import (fetchTarball {
+        url = "https://github.com/NixOS/nixpkgs/archive/06278c77b5d162e62df170fec307e83f1812d94b.tar.gz";
+        sha256 = "sha256:11ri51840scvy9531rbz32241l7l81sa830s90wpzvv86v276aqs";
+    }) {
+      inherit system;
+    config.allowUnfree = true;
+  };
+
+  mdevctl = patchedPkgs.callPackage ./mdevctl {};
+  #frida = (builtins.getFlake "github:Yeshey/frida-nix").packages.${system}.frida-tools;
+  frida = inputs.frida.packages.${system}.frida-tools;
 
   myVgpuVersion = "525.105.14";
   
+  # UNCOMMENT this to pin the version of pkgs if this stops working
+  
   # maybe take a look at https://discourse.nixos.org/t/how-to-add-custom-python-package/536/4
-  vgpu_unlock = pkgs.python310Packages.buildPythonPackage {
+  vgpu_unlock = patchedPkgs.python310Packages.buildPythonPackage {
     pname = "nvidia-vgpu-unlock";
     version = "unstable-2021-04-22";
 
-    src = pkgs.fetchFromGitHub {
+    src = patchedPkgs.fetchFromGitHub {
       owner = "Yeshey";
       repo = "vgpu_unlock";
       rev = "7db331d4a2289ff6c1fb4da50cf445d9b4227421";
       sha256 = "sha256-K7e/9q7DmXrrIFu4gsTv667bEOxRn6nTJYozP1+RGHs=";
     };
 
+    # nativeBuildInputs
     propagatedBuildInputs = [ frida ];
     
     doCheck = false; # Disable running checks during the build
@@ -37,7 +65,7 @@ let
       mkdir -p $out/bin
       cp vgpu_unlock $out/bin/
       substituteInPlace $out/bin/vgpu_unlock \
-              --replace /bin/bash ${pkgs.bash}/bin/bash
+              --replace /bin/bash ${patchedPkgs.bash}/bin/bash
     '';
   };
 in
@@ -45,12 +73,6 @@ in
   options = {
     hardware.nvidia.vgpu = {
       enable = lib.mkEnableOption "vGPU support";
-
-      unlock.enable = lib.mkOption {
-        default = false;
-        type = lib.types.bool;
-        description = "Unlock vGPU functionality for consumer grade GPUs";
-      };
 
       # submodule
       fastapi-dls = lib.mkOption {
@@ -82,6 +104,7 @@ in
             };
           };
         };
+        default = {};
       };
       
     };
@@ -91,7 +114,6 @@ in
 
  ( let
  
-
     patched_pkgs = import (fetchTarball {
         url = "github:nixos/nixpkgs/468a37e6ba01c45c91460580f345d48ecdb5a4db";
         sha256 = "sha256:11ri51840scvy9531rbz32241l7l81sa830s90wpzvv86v276aqs";
@@ -102,6 +124,7 @@ in
  in lib.mkIf cfg.enable {
 
     # pin the kernel version before they applied a breaking patch: https://discourse.nixos.org/t/cant-update-nvidia-driver-on-stable-branch/39246/16
+    /*
     nixpkgs.overlays = [ (self: super: (let
     patched_pkgs = import (fetchTarball {
             url = "github:nixos/nixpkgs/468a37e6ba01c45c91460580f345d48ecdb5a4db";
@@ -112,11 +135,11 @@ in
       };
     in {
       forVgpuLinuxPackages_5_15 = patched_pkgs.linuxPackages_5_15;
-    })) ];
+    })) ]; */
 
 
     #boot.kernelPackages = pkgs.linuxPackages;
-    boot.kernelPackages = patched_pkgs.linuxPackages_5_15; # needed for this linuxPackages_5_19
+    boot.kernelPackages = patchedPkgs.linuxPackages_5_15; # needed for this linuxPackages_5_19
   
     hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable.overrideAttrs ( # CHANGE stable to legacy_470 to pin the version of the driver if it stops working
       { patches ? [], postUnpack ? "", postPatch ? "", preFixup ? "", ... }@attrs: {
@@ -126,7 +149,7 @@ in
       version = "${myVgpuVersion}";
 
       # the new driver (getting from my Google drive)
-      src = pkgs.fetchurl {
+      src = patchedPkgs.fetchurl {
               name = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
               url = "https://drive.usercontent.google.com/download?id=17NN0zZcoj-uY2BELxY2YqGvf6KtZNXhG&export=download&authuser=0&confirm=t&uuid=b70e0e36-34df-4fde-a86b-4d41d21ce483&at=APZUnTUfGnSmFiqhIsCNKQjPLEk3%3A1714043345939";
               sha256 = "sha256-g8BM1g/tYv3G9vTKs581tfSpjB6ynX2+FaIOyFcDfdI=";
@@ -137,15 +160,15 @@ in
         sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
 
         substituteInPlace sriov-manage \
-          --replace lspci ${pkgs.pciutils}/bin/lspci \
-          --replace setpci ${pkgs.pciutils}/bin/setpci
+          --replace lspci ${patchedPkgs.pciutils}/bin/lspci \
+          --replace setpci ${patchedPkgs.pciutils}/bin/setpci
       '' else ''
         # Move path for vgpuConfig.xml into /etc
         sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
 
         substituteInPlace sriov-manage \
-          --replace lspci ${pkgs.pciutils}/bin/lspci \
-          --replace setpci ${pkgs.pciutils}/bin/setpci
+          --replace lspci ${patchedPkgs.pciutils}/bin/lspci \
+          --replace setpci ${patchedPkgs.pciutils}/bin/setpci
       '';
 
       /*
@@ -163,7 +186,7 @@ in
         for i in libnvidia-vgpu.so.${myVgpuVersion} libnvidia-vgxcfg.so.${myVgpuVersion}; do
           install -Dm755 "$i" "$out/lib/$i"
         done
-        patchelf --set-rpath ${pkgs.stdenv.cc.cc.lib}/lib $out/lib/libnvidia-vgpu.so.${myVgpuVersion}
+        patchelf --set-rpath ${patchedPkgs.stdenv.cc.cc.lib}/lib $out/lib/libnvidia-vgpu.so.${myVgpuVersion}
         install -Dm644 vgpuConfig.xml $out/vgpuConfig.xml
 
         for i in nvidia-vgpud nvidia-vgpu-mgr; do
@@ -184,11 +207,10 @@ in
       serviceConfig = {
         Type = "forking";
         ExecStart = lib.strings.concatStringsSep " " [
-          # Won't this just break if cfg.unlock.enable = false?
-          (lib.optionalString cfg.unlock.enable "${vgpu_unlock}/bin/vgpu_unlock")
+          (lib.optionalString cfg.enable "${vgpu_unlock}/bin/vgpu_unlock")
           "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpud"
         ];
-        ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpud";
+        ExecStopPost = "${patchedPkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpud";
         Environment = [ "__RM_NO_VERSION_CHECK=1" ]; # Avoids issue with API version incompatibility when merging host/client drivers
       };
     };
@@ -202,8 +224,8 @@ in
         Type = "forking";
         KillMode = "process";
         ExecStart = "${vgpu_unlock}/bin/vgpu_unlock ${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpu-mgr";
-        ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpu-mgr";
-        Environment = [ "__RM_NO_VERSION_CHECK=1" "LF_PRELOAD=" "LD_LIBRARY_PATH="];
+        ExecStopPost = "${patchedPkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpu-mgr";
+        Environment = [ "__RM_NO_VERSION_CHECK=1"];
       };
     };
 
@@ -217,10 +239,11 @@ in
   })
 
     (lib.mkIf cfg.fastapi-dls.enable {
+    
       virtualisation.oci-containers.containers = {
         fastapi-dls = {
           image = "collinwebdesigns/fastapi-dls";
-          imageFile = pkgs.dockerTools.pullImage {
+          imageFile = patchedPkgs.dockerTools.pullImage {
             imageName = "collinwebdesigns/fastapi-dls";
             imageDigest = "sha256:6fa90ce552c4e9ecff9502604a4fd42b3e67f52215eb6d8de03a5c3d20cd03d1";
             sha256 = "1y642miaqaxxz3z8zkknk0xlvzxcbi7q7ylilnxhxfcfr7x7kfqa";
@@ -258,7 +281,7 @@ in
       };
 
       systemd.services.fastapi-dls-mgr = {
-        path = [ pkgs.openssl ];
+        path = [ patchedPkgs.openssl ];
         script = ''
         WORKING_DIR=${cfg.fastapi-dls.docker-directory}/fastapi-dls/cert
         CERT_CHANGED=false

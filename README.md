@@ -313,3 +313,5 @@ I have these questions on the nixOS discourse that reflect the biggest problems 
 This was heavily based and inspiered in these two repositories:
 - old NixOS module: https://github.com/danielfullmer/nixos-nvidia-vgpu
 - vgpu for newer nvidia drivers: https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher
+
+- Add these references: vgpu looking glass virt-manager: https://github.com/tuh8888/libvirt_win10_vm
