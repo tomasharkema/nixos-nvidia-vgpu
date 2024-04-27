@@ -2,43 +2,56 @@
 
 This module unlocks vGPU functionality on your consumer nvidia card.
 
-Example usage:
-1. run these commands for docker to work (needed if you'll enable `fastapi-dls`):
-   ```bash
-    WORKING_DIR=/opt/docker/fastapi-dls/cert
+## Installation:
 
-    sudo mkdir -p /opt/docker/fastapi-dls/cert
-    mkdir -p $WORKING_DIR
-    cd $WORKING_DIR
-    # create instance private and public key for singing JWT's
-    openssl genrsa -out $WORKING_DIR/instance.private.pem 2048 
-    openssl rsa -in $WORKING_DIR/instance.private.pem -outform PEM -pubout -out $WORKING_DIR/instance.public.pem
-    # create ssl certificate for integrated webserver (uvicorn) - because clients rely on ssl
-    openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -keyout  $WORKING_DIR/webserver.key -out $WORKING_DIR/webserver.crt
+1. Add Module to nixOS
+
+   1. In a non-flake configuration you'll have to [add flake support](https://nixos.wiki/wiki/Flakes#:~:text=nix%2Dcommand%20flakes%27-,Enable%20flakes%20permanently%20in%20NixOS,-Add%20the%20following) to your system, with this method you'll also have to build with the additional '--impure' flag. Add this to your nixOS configuration:
+   ```nix
+   # configuration.nix
+     imports = [
+       (builtins.getFlake "https://github.com/Yeshey/nixos-nvidia-vgpu/archive/refs/heads/development.zip").nixosModules.nvidia-vgpu
+     ];
+
+     hardware.nvidia.vgpu = #...module config...
+
    ```
-2. Add this to your nixOS configuration:
-    ```nix
-    {
-      # Optionally replace "master" with a particular revision to pin this dependency.
-      # This repo also provides the module in a "Nix flake" under `nixosModules.nvidia-vgpu` output
-      imports = [ (builtins.fetchTarball "https://github.com/Yeshey/nixos-nvidia-vgpu_nixOS/archive/master.tar.gz") ];
 
-      boot.kernelPackages = pkgs.linuxPackages_5_15; # Requires this kernel to work
-      hardware.nvidia = {
-        vgpu = {
-          enable = true; # Install NVIDIA KVM vGPU + GRID merged driver for consumer cards with vgpu unlocked.
-          unlock.enable = true; # Activates systemd services to enable vGPU functionality on using DualCoder/vgpu_unlock project.
-          fastapi-dls = { # For the license server for unrestricted use of the vgpu driver in guests
-            enable = true;
-            local_ipv4 = "localhost"; # Use your local IP or hostname if not working (Ex: 192.168.1.81)
-            timezone = "Europe/Lisbon"; # Your timezone (needs to be the same as the tz in the VM)
-          };
-        };
-      };
-    }
-    ```
-    This currently downlaods and installs a merged driver that I built, gets it from my google drive. And requires kernel `5.15`.
-3. Run `nixos-rebuild switch --impure`. (unfortunatley it still needs --impure to run, see issues) 
+   2. in a Flake configuration: (you can also check it in [my nixos config](https://github.com/Yeshey/nixOS-Config/tree/HEAD@{2024-04-27}))
+   ```nix
+   # flake.nix
+   {
+     inputs = {
+       nixos-nvidia-vgpu.url = "github:Yeshey/nixos-nvidia-vgpu/master";
+     };
+
+     outputs = {self, nixpkgs, nixos-nvidia-vgpu, ...}: {
+       nixosConfigurations.HOSTNAME = nixpkgs.lib.nixosSystem {
+         # ...
+         modules = [
+           nixos-nvidia-vgpu.nixosModules.default
+           {
+             hardware.nvidia.vgpu = #...module config...
+           }
+           # ...
+         ];
+       };
+     };
+   ```
+2. Then add the module configuration to activate vgpu, example:
+```nix
+  hardware.nvidia.vgpu = {
+    enable = true; # Install NVIDIA KVM vGPU + GRID driver + sets required kernel (5.15.82) + Activates required systemd services
+    fastapi-dls = { # License server for unrestricted use of the vgpu driver in guests
+      enable = true;
+      #local_ipv4 = "192.168.1.109"; # detected automatically
+      #timezone = "Europe/Lisbon"; # detected automatically (needs to be the same as the tz in the VM)
+      #docker-directory = "/mnt/dockers"; # default is "/opt/docker"
+    };
+  };
+```
+This currently downlaods and installs a merged driver that I built, gets it from my google drive and installs kernel `5.15`.
+1. Run `nixos-rebuild switch`.
 
 ## Requirements
 
@@ -64,27 +77,17 @@ Example usage:
     If yours is not in this list, you'll likely have to add support for your graphics card and compile the driver, please refer to [Compile your driver](#compile-your-driver).
 - Trust in my google drive
   - The module lazily grabs the driver I pre-built from my google drive, if you're not confortable with this, please refer to [Compile your driver](#compile-your-driver) to compile your own driver and use it.
-- Kernel `5.15` as stated above
-
-### Warning: 
-
-The current version in the `master` branch only works in version `23.05` of nixOS and older. If you're on `unstable` please refer below:
- 
-#### `unstable`
- 
-- To make this module work in unstable, you'll have to clone the repo and change in the file `flake.nix` the line: `inputs.frida.url = "github:Yeshey/frida-nix";` to `inputs.frida.url = "github:itstarsun/frida-nix";`.  
-  The original repository that provides frida tools already works with the unstable channel.
 
 ### Tested in
 
 - kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 22.11.20230428.7449971`. 
 - kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 23.05.20230605.70f7275`.
-
+- kernel `5.15.82` with a `NVIDIA GeForce RTX 2060 Mobile` in `NNixOS 23.11.20240403.1487bde (Tapir) x86_64`.
 ## Guest VM
 
 ### Windows
 
-In the Windows VM you need to install the appropriate drivers too, if you use a A profile([difference between profiles](https://youtu.be/cPrOoeMxzu0?t=1244)) for example (from the `mdevctl types` command) you can use the normal driver from the [nvidia licensing server](#nvidia-drivers), if you want a Q profile, you're gonna need to get the driver from the [nvidia servers](#nvidia-drivers) and patch it with the [community vgpu unlock repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher).
+In the Windows VM you need to install the appropriate drivers too, if you use an A profile([difference between profiles](https://youtu.be/cPrOoeMxzu0?t=1244)) for example (from the `mdevctl types` command) you can use the normal driver from the [nvidia licensing server](#nvidia-drivers), if you want a Q profile, you're gonna need to get the driver from the [nvidia servers](#nvidia-drivers) and patch it with the [community vgpu unlock repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher).
 
 That [didn't work for me either](https://discord.com/channels/829786927829745685/830520513834516530/1109199157299793970) tho, so I had to use the special `GeForce RTX 2070-` profiles (from `mdevctl types`) and a special driver for the VM, [this one](https://nvidia-gaming.s3.us-east-1.amazonaws.com/windows/528.49_Cloud_Gaming_win10_win11_server2019_server2022_dch_64bit_international.exe).  
 Here is the explenation of where that driver is from:
@@ -95,38 +98,12 @@ Here is the explenation of where that driver is from:
 
 ### Looking Glass
 
-You can add [this module](https://github.com/NixOS/nixpkgs/blob/63c34abfb33b8c579631df6b5ca00c0430a395df/nixos/modules/programs/looking-glass.nix) to your nixOS configuration, I don't think it's in nixpkgs yet, so you can import it like this:
-```nix
-imports = [
-  (import (builtins.fetchurl{
-        url = "https://github.com/NixOS/nixpkgs/raw/63c34abfb33b8c579631df6b5ca00c0430a395df/nixos/modules/programs/looking-glass.nix";
-        sha256 = "sha256:1lfrqix8kxfawnlrirq059w1hk3kcfq4p8g6kal3kbsczw90rhki";
-      } ))
-];
-```
-
-Then you can activate it like this:
+Looking glass allows VGA PCI Pass-through without an attached physical monitor to view the VM in all its glory.
 
 ```nix
-  programs.looking-glass = {
-    enable = true;
-  };
-```
-
-If your looking glass version currently in nixpkgs is below B6, I advise you to get at least the [B6 version](https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/virtualization/looking-glass-client/default.nix), to also have sound transfered over:
-
-```nix
-  programs.looking-glass = let
-    # Looking glass B6 version in nixpkgs: 
-    myPkgs = import (builtins.fetchTarball {
-        url = "https://github.com/NixOS/nixpkgs/archive/9fa5c1f0a85f83dfa928528a33a28f063ae3858d.tar.gz";
-    }) {};
-
-    LookingGlassB6 = myPkgs.looking-glass-client;
-  in {
-    enable = true;
-    package = LookingGlassB6;
-  };
+  environment.systemPackages = with pkgs; [
+    looking-glass-client
+  ];
 ```
 
 #### Debug
@@ -137,7 +114,7 @@ If it gives a permission error like this:
 ```
 You can fix it for the current session with `sudo chmod 777 /dev/shm/looking-glass`
 
-If it gives a reerr like this:
+If it gives a error like this:
 ```
 Invalid value provided to the option: app:shmFile
 
@@ -226,8 +203,7 @@ As explained in the comments in the above code you'll have to mount the network 
 I also advise you to make your local IP static, to prevent windows from loosing access to those folder because of IP changes:
 
 ```nix
-  # For sharing folders with the windows VM
-  # Make your local IP static for the VM to never lose the folders
+  # This doesnt work if the network is being managed by networkmanager, you can make a static ip with the gui or figure out how to manage networkmanager declaritivley
   networking.interfaces.eth0.ipv4.addresses = [ {
     address = "192.168.1.109";
     prefixLength = 24;
@@ -252,7 +228,7 @@ Test also `mdevctl types`, if there is no output, maybe your graphics card isn't
 
 You can also check if the services `nvidia-vgpu-mgr` and `nvidia-vgpud` executed without errors with `systemctl status nvidia-vgpud` and `systemctl status nvidia-vgpu-mgr`. (or something like `journalctl -fu nvidia-vgpud` to see the logs in real time)
 
-If you set up fastapi-dls correctly, you should get a notification when your windows VM starts saying "nvidia license aquiered"
+If you set up fastapi-dls correctly, you should get a notification when your windows VM starts saying "nvidia license aquiered". In the Linux or Windows guest you can also run `nvidia-smi -q  | grep -i "License"` or `& 'nvidia-smi' -q | Select-String "License"` respectively to check if it's licensed.
 
 I've tested creating an mdev on my own `NVIDIA GeForce RTX 2060 Mobile` by running:
 ```bash
@@ -290,21 +266,18 @@ If you don't trust my Google drive pre built driver, or if it doesn't have suppo
 
 ## To-Do
 
-- Fix issues below
 - Make a full guide for begginers on how to make virt-manager, looking-glass, windows VM with vgpu unlock in nixOS
-- Make it get the files it neesd from <https://archive.biggerthanshit.com/> and compile the merged driver that it will install with the [community vgpu repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher), instead of grabbing the prebuilt version from your google drive.
-
----
+- Make it get the files it needs from <https://archive.biggerthanshit.com/> and compile the merged driver that it will install with the [community vgpu repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher), instead of grabbing the prebuilt version from your google drive. (check [this work](https://github.com/letmeiiiin/nixos-nvidia-vgpu) by [letmeiiiin](https://github.com/letmeiiiin))
+- Bring pinned pkgs to flake inputs and make frida follow it, issue: https://github.com/Yeshey/nixos-nvidia-vgpu/issues/4
 
 For more help [Join VGPU-Unlock discord for Support](https://discord.com/invite/5rQsSV3Byq), for help related to nixOS, tag me (Jonnas#1835)
 
 ## Disclaimer and contributions
 
-I'm not an experienced nix developer and a lot of whats implemented here could be done in a better way. If anyone is interested in contributing, you may get in contact through the issues or my email (yesheysangpo@gmail.com) or simply make a pull request with details as to what it changes.
+I'm not an experienced nix developer and a lot of what's implemented here could be done in a better way. If anyone is interested in contributing, you may get in contact through the issues or my email (yesheysangpo@gmail.com) or simply make a pull request with details as to what it changes.
 
-I have these questions on the nixOS discourse that reflect the biggest problems with this module as of now:
-- Commands need to be ran manually for the docker volume to work: (Fixed in development branch by [physics-enthusiast](https://github.com/physics-enthusiast), pending merge)
-- Still needs `--impure`: `access to absolute path '/opt/docker' is forbidden in pure eval mode (use '--impure' to override)`
+Biggest problems of the module:
+- ~~Commands need to be ran manually for the docker volume to work: Still needs `--impure`: `access to absolute path '/opt/docker' is forbidden in pure eval mode (use '--impure' to override)`~~ (fixed, `--impure` not needed anymore! Big thanks to [physics-enthusiast](https://github.com/physics-enthusiast)'s [contributions](https://github.com/Yeshey/nixos-nvidia-vgpu/pull/2))
 - ~~Needs `--impure` to run.~~
   - ~~`error: cannot call 'getFlake' on unlocked flake reference 'github:itstarsun/frida-nix'`, because of the line:~~
   - ~~`frida = (builtins.getFlake "github:itstarsun/frida-nix").packages.x86_64-linux.frida-tools;`~~ (fixed, [thanks](https://discourse.nixos.org/t/for-nixos-on-aws-ec2-how-to-get-ip-address/15616/12?u=yeshey)!)
@@ -313,3 +286,8 @@ I have these questions on the nixOS discourse that reflect the biggest problems 
 This was heavily based and inspiered in these two repositories:
 - old NixOS module: https://github.com/danielfullmer/nixos-nvidia-vgpu
 - vgpu for newer nvidia drivers: https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher
+
+
+
+# HEY
+- (note to self) Add these references somewhere above: vgpu looking glass virt-manager guide: https://github.com/tuh8888/libvirt_win10_vm
