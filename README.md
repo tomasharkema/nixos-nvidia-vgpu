@@ -66,20 +66,11 @@ Example usage:
   - The module lazily grabs the driver I pre-built from my google drive, if you're not confortable with this, please refer to [Compile your driver](#compile-your-driver) to compile your own driver and use it.
 - Kernel `5.15` as stated above
 
-### Warning: 
-
-The current version in the `master` branch only works in version `23.05` of nixOS and older. If you're on `unstable` please refer below:
- 
-#### `unstable`
- 
-- To make this module work in unstable, you'll have to clone the repo and change in the file `flake.nix` the line: `inputs.frida.url = "github:Yeshey/frida-nix";` to `inputs.frida.url = "github:itstarsun/frida-nix";`.  
-  The original repository that provides frida tools already works with the unstable channel.
-
 ### Tested in
 
 - kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 22.11.20230428.7449971`. 
 - kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 23.05.20230605.70f7275`.
-
+- kernel `5.15.82` with a `NVIDIA GeForce RTX 2060 Mobile` in `NNixOS 23.11.20240403.1487bde (Tapir) x86_64`.
 ## Guest VM
 
 ### Windows
@@ -290,20 +281,18 @@ If you don't trust my Google drive pre built driver, or if it doesn't have suppo
 
 ## To-Do
 
-- Fix issues below
 - Make a full guide for begginers on how to make virt-manager, looking-glass, windows VM with vgpu unlock in nixOS
-- Make it get the files it neesd from <https://archive.biggerthanshit.com/> and compile the merged driver that it will install with the [community vgpu repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher), instead of grabbing the prebuilt version from your google drive.
+- Make it get the files it needs from <https://archive.biggerthanshit.com/> and compile the merged driver that it will install with the [community vgpu repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher), instead of grabbing the prebuilt version from your google drive. (check [this work](https://github.com/letmeiiiin/nixos-nvidia-vgpu) by [letmeiiiin](https://github.com/letmeiiiin))
 - Bring pinned pkgs to flake inputs and make frida follow it, issue: https://github.com/Yeshey/nixos-nvidia-vgpu/issues/4
 
 For more help [Join VGPU-Unlock discord for Support](https://discord.com/invite/5rQsSV3Byq), for help related to nixOS, tag me (Jonnas#1835)
 
 ## Disclaimer and contributions
 
-I'm not an experienced nix developer and a lot of whats implemented here could be done in a better way. If anyone is interested in contributing, you may get in contact through the issues or my email (yesheysangpo@gmail.com) or simply make a pull request with details as to what it changes.
+I'm not an experienced nix developer and a lot of what's implemented here could be done in a better way. If anyone is interested in contributing, you may get in contact through the issues or my email (yesheysangpo@gmail.com) or simply make a pull request with details as to what it changes.
 
-I have these questions on the nixOS discourse that reflect the biggest problems with this module as of now:
-- Commands need to be ran manually for the docker volume to work: (no issue created yet)
-- Still needs `--impure`: `access to absolute path '/opt/docker' is forbidden in pure eval mode (use '--impure' to override)`
+Biggest problems of the module:
+- ~~Commands need to be ran manually for the docker volume to work: Still needs `--impure`: `access to absolute path '/opt/docker' is forbidden in pure eval mode (use '--impure' to override)`~~ (fixed, `--impure` not needed anymore! Big thanks to [physics-enthusiast](https://github.com/physics-enthusiast)'s [contributions](https://github.com/Yeshey/nixos-nvidia-vgpu/pull/2))
 - ~~Needs `--impure` to run.~~
   - ~~`error: cannot call 'getFlake' on unlocked flake reference 'github:itstarsun/frida-nix'`, because of the line:~~
   - ~~`frida = (builtins.getFlake "github:itstarsun/frida-nix").packages.x86_64-linux.frida-tools;`~~ (fixed, [thanks](https://discourse.nixos.org/t/for-nixos-on-aws-ec2-how-to-get-ip-address/15616/12?u=yeshey)!)
@@ -313,4 +302,7 @@ This was heavily based and inspiered in these two repositories:
 - old NixOS module: https://github.com/danielfullmer/nixos-nvidia-vgpu
 - vgpu for newer nvidia drivers: https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher
 
-- Add these references: vgpu looking glass virt-manager: https://github.com/tuh8888/libvirt_win10_vm
+
+
+# HEY
+- (note to self) Add these references somewhere above: vgpu looking glass virt-manager: https://github.com/tuh8888/libvirt_win10_vm
