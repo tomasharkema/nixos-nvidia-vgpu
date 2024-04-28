@@ -1,10 +1,6 @@
 inputs: { pkgs, lib, config, ... }:
 
 let
-  # Using the pinned packages because these two problems arrose in the latest packages:
-  # version `GLIBC_2.38' not found when trying to run the VM in nvidia-vgpu-mgr.service, maybe related to https://github.com/NixOS/nixpkgs/issues/287764
-  # boot.kernelPackages = patched_pkgs.linuxPackages_5_15 gave this error: https://discourse.nixos.org/t/cant-update-nvidia-driver-on-stable-branch/39246
-
   inherit (pkgs.stdenv.hostPlatform) system;
 
   cfg = config.hardware.nvidia.vgpu;
@@ -18,7 +14,7 @@ let
     config.allowUnfree = true;
   };
 
-  mdevctl = patchedPkgs.callPackage ./mdevctl {};
+  mdevctl = patchedPkgs.callPackage ./mdevctl {}; # pkgs.mdevctl ( Error about 60-mdevctl.rules ) ;
   #frida = (builtins.getFlake "github:Yeshey/frida-nix").packages.${system}.frida-tools; # if not using a flake, you can use this with --impure
   frida = inputs.frida.packages.${system}.frida-tools;
 

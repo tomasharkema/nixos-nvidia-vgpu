@@ -50,8 +50,9 @@ This module unlocks vGPU functionality on your consumer nvidia card.
     };
   };
 ```
-This currently downlaods and installs a merged driver that I built, gets it from my google drive and installs kernel `5.15`.
-1. Run `nixos-rebuild switch`.
+This currently downlaods and installs a merged driver that I built, gets it from my google drive and installs kernel `5.15`.  
+
+3. Run `nixos-rebuild switch`.
 
 ## Requirements
 
