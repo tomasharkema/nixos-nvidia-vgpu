@@ -17,7 +17,7 @@ This module unlocks vGPU functionality on your consumer nvidia card.
 
    ```
 
-   2. in a Flake configuration: (you can also check it in [my nixos config](https://github.com/Yeshey/nixOS-Config/tree/HEAD@{2024-04-27}))
+   2. in a Flake configuration: (you can also check it in [my nixos config](https://github.com/Yeshey/nixOS-Config/tree/HEAD@{2024-04-27})). For an introduction to flakes, see [here](https://nixos.wiki/wiki/Flakes).
    ```nix
    # flake.nix
    {
@@ -44,7 +44,7 @@ This module unlocks vGPU functionality on your consumer nvidia card.
     enable = true; # Install NVIDIA KVM vGPU + GRID driver + sets required kernel (5.15.82) + Activates required systemd services
     fastapi-dls = { # License server for unrestricted use of the vgpu driver in guests
       enable = true;
-      #local_ipv4 = "192.168.1.109"; # detected automatically
+      #local_ipv4 = "192.168.1.109"; # Hostname is autodetected, use this setting to override
       #timezone = "Europe/Lisbon"; # detected automatically (needs to be the same as the tz in the VM)
       #docker-directory = "/mnt/dockers"; # default is "/opt/docker"
     };
@@ -57,7 +57,8 @@ This currently downlaods and installs a merged driver that I built, gets it from
 ## Requirements
 
 - Unlockable consumer NVIDIA GPU card (can't be `Ampere` architecture)
-  - These are the graphics cards the driver I pre-compiled supports: ([from here](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher/blob/525.105/patch.sh))
+  - These are the graphics cards the driver supports: ([from here](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher/blob/525.105/patch.sh))
+    
     ```
       # RTX 2070 super 8GB
       # RTX 2080 super 8GB
@@ -84,6 +85,12 @@ This currently downlaods and installs a merged driver that I built, gets it from
 - kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 22.11.20230428.7449971`. 
 - kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 23.05.20230605.70f7275`.
 - kernel `5.15.82` with a `NVIDIA GeForce RTX 2060 Mobile` in `NNixOS 23.11.20240403.1487bde (Tapir) x86_64`.
+    
+    TODO: Add mechanism to add more cards
+- Trust in https://github.com/justin-himself/NVIDIA-VGPU-Driver-Archive/tree/master
+  - The module fetches (what are supposed to be) unmodified nvidia drivers from this repo. If you don't trust it and you [have access to known good sources](https://gitlab.com/polloloco/vgpu-proxmox#nvidia-driver) you can verify the hashes of the .run files with them.
+- This was only tested on NixOS `23.05`. Might work with older versions, might not.
+
 ## Guest VM
 
 ### Windows
@@ -225,7 +232,7 @@ To check and match versions see [here](https://docs.nvidia.com/grid/index.html).
 ## Additional Notes
 
 To test if everything is installed correctly run `nvidia-smi vgpu`. If there is no output something went wrong with the installation.  
-Test also `mdevctl types`, if there is no output, maybe your graphics card isn't supported yet, you'll need to add a `vcfgclone` line as per [this repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher). If that is the case, you'll need to recompile the driver with the new `vcfgclone`, upload it somewhere, and change the src to grab your driver instead. Refer to [Compile your driver](#compile-your-driver)
+Also test `mdevctl types`, if there is no output, maybe your graphics card isn't supported yet. (TODO: add setting to modify the [vcfgclone lines](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher#usage))
 
 You can also check if the services `nvidia-vgpu-mgr` and `nvidia-vgpud` executed without errors with `systemctl status nvidia-vgpud` and `systemctl status nvidia-vgpu-mgr`. (or something like `journalctl -fu nvidia-vgpud` to see the logs in real time)
 
@@ -270,10 +277,13 @@ If you don't trust my Google drive pre built driver, or if it doesn't have suppo
 - Make a full guide for begginers on how to make virt-manager, looking-glass, windows VM with vgpu unlock in nixOS
 - Make it get the files it needs from <https://archive.biggerthanshit.com/> and compile the merged driver that it will install with the [community vgpu repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher), instead of grabbing the prebuilt version from your google drive. (check [this work](https://github.com/letmeiiiin/nixos-nvidia-vgpu) by [letmeiiiin](https://github.com/letmeiiiin))
 - Bring pinned pkgs to flake inputs and make frida follow it, issue: https://github.com/Yeshey/nixos-nvidia-vgpu/issues/4
+You should get a notification when your windows VM starts saying "Nvidia license acquired"
 
-For more help [Join VGPU-Unlock discord for Support](https://discord.com/invite/5rQsSV3Byq), for help related to nixOS, tag me (Jonnas#1835)
+---
 
-## Disclaimer and contributions
+For more help [Join VGPU-Unlock discord for Support](https://discord.com/invite/5rQsSV3Byq)
+
+## Acknowledgements
 
 I'm not an experienced nix developer and a lot of what's implemented here could be done in a better way. If anyone is interested in contributing, you may get in contact through the issues or my email (yesheysangpo@gmail.com) or simply make a pull request with details as to what it changes.
 
@@ -285,10 +295,9 @@ Biggest problems of the module:
 - ~~Hard coded nix store paths: https://discourse.nixos.org/t/how-to-use-python-environment-in-a-systemd-service/28022~~ (fixed!)
 
 This was heavily based and inspiered in these two repositories:
+
 - old NixOS module: https://github.com/danielfullmer/nixos-nvidia-vgpu
 - vgpu for newer nvidia drivers: https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher
-
-
 
 # HEY
 - (note to self) Add these references somewhere above: vgpu looking glass virt-manager guide: https://github.com/tuh8888/libvirt_win10_vm
