@@ -22,7 +22,12 @@ This module unlocks vGPU functionality on your consumer nvidia card.
    # flake.nix
    {
      inputs = {
-       nixos-nvidia-vgpu.url = "github:Yeshey/nixos-nvidia-vgpu/master";
+       nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
+
+       nixos-nvidia-vgpu = {
+         url = "github:Yeshey/nixos-nvidia-vgpu/master";
+         inputs.nixpkgs.follows = "nixpkgs";
+       };
      };
 
      outputs = {self, nixpkgs, nixos-nvidia-vgpu, ...}: {
@@ -41,7 +46,8 @@ This module unlocks vGPU functionality on your consumer nvidia card.
 2. Then add the module configuration to activate vgpu, example:
 ```nix
   hardware.nvidia.vgpu = {
-    enable = true; # Install NVIDIA KVM vGPU + GRID driver + sets required kernel (5.15.82) + Activates required systemd services
+    enable = true; # Install NVIDIA KVM vGPU + GRID driver + Activates required systemd services
+    vgpu_driver_src.sha256 = "sha256-tFgDf7ZSIZRkvImO+9YglrLimGJMZ/fz25gjUT0TfDo="; # use if you're getting the `Unfortunately, we cannot download file...` error # find hash with `nix hash file foo.txt`        
     fastapi-dls = { # License server for unrestricted use of the vgpu driver in guests
       enable = true;
       #local_ipv4 = "192.168.1.109"; # Hostname is autodetected, use this setting to override
@@ -50,14 +56,73 @@ This module unlocks vGPU functionality on your consumer nvidia card.
     };
   };
 ```
-This currently downlaods and installs a merged driver that I built, gets it from my google drive and installs kernel `5.15`.  
+- This will attempt to compile and install the driver `535.129.03`, you will be prompted to add it with `nix-store --add-fixed...`, you'll need to get the file [from nvidia](https://www.nvidia.com/object/vGPU-software-driver.html), you have to sign up and request and it might take some days. Refer to the [Discord VGPU-Unlock Community](https://discord.com/invite/5rQsSV3Byq) for support.  
+If you're still getting the `Unfortunately, we cannot download file...` error, use the option `vgpu_driver_src.sha256` to override the hardcoded hash. Find the hash of the file with `nix hash file file.zip`.
+- `fastapi-dls` allows unrestricted access on guests.
+- If you have a compiled merge driver, you can directly use it with the `useMyDriver` option. Here is an example using the driver in my google drive:
+  ```nix
+  {
+    inputs,
+    config,
+    pkgs,
+    lib,
+    ...
+  }:
 
-3. Run `nixos-rebuild switch`.
+  with lib;
+  let
+      # need to pin because of this error: https://discourse.nixos.org/t/cant-update-nvidia-driver-on-stable-branch/39246 (and now another errors?)
+    inherit (pkgs.stdenv.hostPlatform) system;
+    patchedPkgs = import (fetchTarball {
+          url = "https://github.com/NixOS/nixpkgs/archive/468a37e6ba01c45c91460580f345d48ecdb5a4db.tar.gz";
+          sha256 = "sha256:057qsz43gy84myk4zc8806rd7nj4dkldfpn7wq6mflqa4bihvdka";
+      }) {
+      inherit system;
+      config.allowUnfree = true;
+    };
+  in
+  {
+    boot.kernelPackages = patchedPkgs.linuxPackages_5_15; # needed for this linuxPackages_5_19
+
+    hardware.nvidia = {
+      vgpu = {
+        enable = true; # Install NVIDIA KVM vGPU + GRID driver
+        vgpu_driver_src.sha256 = "sha256-tFgDf7ZSIZRkvImO+9YglrLimGJMZ/fz25gjUT0TfDo="; # use if you're getting the `Unfortunately, we cannot download file...` error # find hash with `nix hash file foo.txt`        
+        useMyDriver = {
+          enable = true;
+          name = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched.run";
+          sha256 = "sha256-g8BM1g/tYv3G9vTKs581tfSpjB6ynX2+FaIOyFcDfdI=";
+          driver-version = "525.105.14";
+          vgpu-driver-version = "525.105.14";
+          # you can not specify getFromRemote and it will ask to add the file manually with `nix-store --add-fixed...`
+          getFromRemote = pkgs.fetchurl {
+                name = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
+                url = "https://drive.usercontent.google.com/download?id=17NN0zZcoj-uY2BELxY2YqGvf6KtZNXhG&export=download&authuser=0&confirm=t&uuid=b70e0e36-34df-4fde-a86b-4d41d21ce483&at=APZUnTUfGnSmFiqhIsCNKQjPLEk3%3A1714043345939";
+                sha256 = "sha256-g8BM1g/tYv3G9vTKs581tfSpjB6ynX2+FaIOyFcDfdI=";
+              };
+        };
+        fastapi-dls = {
+          enable = true;
+          #local_ipv4 = "192.168.1.109"; # "localhost"; #"192.168.1.109";
+          #timezone = "Europe/Lisbon";
+          #docker-directory = "/mnt/dockers";
+        };
+      };
+    };
+
+  }
+  ```
+
+1. Run `nixos-rebuild switch`.
+
+You can refer to `./guides` for specific goals:
+- [virt-manager.md]() to set up a virt-mananger windows 10 guest that can be viewed through looking glass with samba folder sharing.
 
 ## Requirements
 
 - Unlockable consumer NVIDIA GPU card (can't be `Ampere` architecture)
-  - These are the graphics cards the driver supports: ([from here](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher/blob/525.105/patch.sh))
+  - [These](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher/blob/525.105/patch.sh) are the graphic cards the driver supports.  
+  - These are the graphics my pre-compiled driver in google drive supports:
     
     ```
       # RTX 2070 super 8GB
@@ -76,9 +141,7 @@ This currently downlaods and installs a merged driver that I built, gets it from
       # GTX 980M -> Tesla M60
       # GTX 950M -> Tesla M10
     ```
-    If yours is not in this list, you'll likely have to add support for your graphics card and compile the driver, please refer to [Compile your driver](#compile-your-driver).
-- Trust in my google drive
-  - The module lazily grabs the driver I pre-built from my google drive, if you're not confortable with this, please refer to [Compile your driver](#compile-your-driver) to compile your own driver and use it.
+    If yours is not in this list or in the repo, you'll likely have to add support for your graphics card and compile the driver, please refer to [Compile your driver](#compile-your-driver).
 
 ### Tested in
 
@@ -98,120 +161,6 @@ Here is the explenation of where that driver is from:
 > there's no trial and you need to buy a compute cluster from nuhvidya.  
 > But Amazon has this and they host the drivers for people to use.  
 > The link comes from their bucket that has the vGaming drivers
-
-### Looking Glass
-
-Looking glass allows VGA PCI Pass-through without an attached physical monitor to view the VM in all its glory.
-
-```nix
-  environment.systemPackages = with pkgs; [
-    looking-glass-client
-  ];
-```
-
-#### Debug
-
-If it gives a permission error like this:
-```
-[E]    242844972           ivshmem.c:159  | ivshmemOpenDev                 | Permission denied
-```
-You can fix it for the current session with `sudo chmod 777 /dev/shm/looking-glass`
-
-If it gives a error like this:
-```
-Invalid value provided to the option: app:shmFile
-
- Error: Invalid path to the ivshmem file specified
-
-Valid values are:
-```
-
-then `sudo touch /dev/shm/looking-glass` and `sudo chmod 777 /dev/shm/looking-glass` and THEN start the VM. If the VM was already running you'll need to reboot and try to run looking glass before starting the VM.
-
-### Share folders
-
-The best way I found to share folders is through the network with samba, couldn't make `spice-webdav` work with looking-glass. 
-
-Take a look at the following configuration to realise that:
-
-```nix
-  # For sharing folders with the windows VM
-  # Make your local IP static for the VM to never lose the folders
-  networking.interfaces.eth0.ipv4.addresses = [ {
-    address = "192.168.1.109";
-    prefixLength = 24;
-  } ];
-  services.samba-wsdd.enable = true; # make shares visible for windows 10 clients
-  networking.firewall.allowedTCPPorts = [
-    5357 # wsdd
-  ];
-  networking.firewall.allowedUDPPorts = [
-    3702 # wsdd
-  ];
-  services.samba = {
-    enable = true;
-    securityType = "user";
-    extraConfig = ''
-      workgroup = WORKGROUP
-      server string = smbnix
-      netbios name = smbnix
-      security = user 
-      #use sendfile = yes
-      #max protocol = smb2
-      # note: localhost is the ipv6 localhost ::1
-      #hosts allow = 192.168.0. 127.0.0.1 localhost
-      #hosts deny = 0.0.0.0/0
-      guest account = nobody
-      map to guest = bad user
-    '';
-    shares = {
-      hdd-ntfs = {
-        path = "/mnt/hdd-ntfs";
-        browseable = "yes";
-        "read only" = "no";
-        "guest ok" = "yes";
-        "create mask" = "0644";
-        "directory mask" = "0755";
-        #"force user" = "username";
-        #"force group" = "groupname";
-      };
-      DataDisk = {
-        path = "/mnt/DataDisk";
-        browseable = "yes";
-        "read only" = "no";
-        "guest ok" = "yes";
-        "create mask" = "0644";
-        "directory mask" = "0755";
-        #"force user" = "username";
-        #"force group" = "groupname";
-      };
-    };
-  };
-  networking.firewall.allowPing = true;
-  services.samba.openFirewall = true;
-  # However, for this samba share to work you will need to run `sudo smbpasswd -a <yourusername>` after building your configuration! (as stated in the nixOS wiki for samba: https://nixos.wiki/wiki/Samba)
-  # In windows you can access them in file explorer with `\\192.168.1.xxx` or whatever your local IP is
-  # In Windowos you should also map them to a drive to use them in a lot of programs, for this:
-  #   - Add a file MapNetworkDriveDataDisk and MapNetworkDriveHdd-ntfs to the folder C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup (to be accessible to every user in every startup):
-  #      With these contents respectively:
-  #         net use V: "\\192.168.1.109\DataDisk" /p:yes
-  #      and
-  #         net use V: "\\192.168.1.109\hdd-ntfs" /p:yes
-  # Then to have those drives be usable by administrator programs, open a cmd with priviliges and also run both commands above! This might be needed if you want to for example install a game in them, see this reddit post: https://www.reddit.com/r/uplay/comments/tww5ey/any_way_to_install_games_to_a_network_drive/
-  # You can make them always be mounted with admin too, through the Task Schedueler > New Task > Tick "Run as admin" and add the path to the script as a program (could be the one in C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup)
-```
-
-As explained in the comments in the above code you'll have to mount the network drives in windows.
-
-I also advise you to make your local IP static, to prevent windows from loosing access to those folder because of IP changes:
-
-```nix
-  # This doesnt work if the network is being managed by networkmanager, you can make a static ip with the gui or figure out how to manage networkmanager declaritivley
-  networking.interfaces.eth0.ipv4.addresses = [ {
-    address = "192.168.1.109";
-    prefixLength = 24;
-  } ];
-```
 
 ### nvidia-drivers
 
@@ -249,33 +198,23 @@ b761f485-1eac-44bc-8ae6-2a3569881a1a 0000:01:00.0 nvidia-258 (defined)
 
 Also you can change the resolution and other parameters of a profile directly in the vgpu config xml, so you can mod for example a A profile as you need, just need to reboot to get the changes loaded (or reload all the stuff)
 
-## Compile your driver
+## Compile your drivers
 
-If you don't trust my Google drive pre built driver, or if it doesn't have support for your graphics card yet, you'll need to compile the driver:
+Use `nix-shell` to get the tools to run the [vGPU community repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher), you'll have to clone the branch for the driver you want with submodules, for example: `git clone --recurse-submodules -b 525.105 https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher.git`.  
+Missing `mscompress` to compile the windows guest driver for now tho.
 
-1. Refer to the [vGPU community repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher) to compile your own driver. If your graphics card isn't supported you'll likely have to add a `vcfgclone` in patch.sh of their repository as per their instructions.
-   1. I compiled it in another OS(manjaro in my case), as nixOS proved to be harder.
-2. Upload your driver somewhere, for example, google drive 
-3. Download or clone this repo and change the following line to point to the download link of your new driver instead. You might also have to change the `sha256`
-    ```nix
-      # the new driver (getting from my Google drive)
-      src = pkgs.fetchurl {
-              name = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
-              url = "https://drive.google.com/u/1/uc?id=17NN0zZcoj-uY2BELxY2YqGvf6KtZNXhG&export=download&confirm=t&uuid=e2729c36-3bb7-4be6-95b0-08e06eac55ce&at=AKKF8vzPeXmt0W_pxHE9rMqewfXY:1683158182055";
-              sha256 = "sha256-g8BM1g/tYv3G9vTKs581tfSpjB6ynX2+FaIOyFcDfdI=";
-            };
-    ```
-4. In your configuration point to this new module instead.
+### Linux Host Merged Driver
+
+In the case of the merged driver you'll have to get the vgpu driver and the normal driver and merge them with the vGPU repo.
+
+1. Refer to the [vGPU community repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher). If your graphics card isn't supported you'll likely have to add a `vcfgclone` in patch.sh of their repository as per their instructions.
+   1. I compiled it in another OS(manjaro in my case).
+2. Use the option `useMyDriver` like shown in [installation](#installation) section.
+4. Refer to the [VGPU-Unlock discord community](https://discord.com/invite/5rQsSV3Byq) for help :)
 
 ## To-Do
 
-    TODO: Add mechanism to add more cards
-- Trust in https://github.com/justin-himself/NVIDIA-VGPU-Driver-Archive/tree/master
-  - The module fetches (what are supposed to be) unmodified nvidia drivers from this repo. If you don't trust it and you [have access to known good sources](https://gitlab.com/polloloco/vgpu-proxmox#nvidia-driver) you can verify the hashes of the .run files with them.
-- This was only tested on NixOS `23.05`. Might work with older versions, might not.
-
-- Make a full guide for begginers on how to make virt-manager, looking-glass, windows VM with vgpu unlock in nixOS
-- Make it get the files it needs from <https://archive.biggerthanshit.com/> and compile the merged driver that it will install with the [community vgpu repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher), instead of grabbing the prebuilt version from your google drive. (check [this work](https://github.com/letmeiiiin/nixos-nvidia-vgpu) by [letmeiiiin](https://github.com/letmeiiiin))
+- Add mechanism to add more cards
 - Bring pinned pkgs to flake inputs and make frida follow it, issue: https://github.com/Yeshey/nixos-nvidia-vgpu/issues/4
 You should get a notification when your windows VM starts saying "Nvidia license acquired"
 - package mscompress to nixOS and add it to shell.nix (https://github.com/stapelberg/mscompress)
@@ -286,7 +225,7 @@ For more help [Join VGPU-Unlock discord for Support](https://discord.com/invite/
 
 ## Acknowledgements
 
-I'm not an experienced nix developer and a lot of what's implemented here could be done in a better way. If anyone is interested in contributing, you may get in contact through the issues or my email (yesheysangpo@gmail.com) or simply make a pull request with details as to what it changes.
+I'm not an experienced nix developer and a lot of what's implemented here could be done in a better way. If anyone is interested in contributing, you may get in contact through the issues or simply make a pull request with details as to what it changes.
 
 Biggest problems of the module:
 - ~~Grabs merged driver from my google drive instead of compiling it~~(fixed by [letmeiiiin](https://github.com/letmeiiiin)'s [work](https://github.com/letmeiiiin/nixos-nvidia-vgpu)! Big thanks!)
@@ -300,6 +239,3 @@ This was heavily based and inspiered in these two repositories:
 
 - old NixOS module: https://github.com/danielfullmer/nixos-nvidia-vgpu
 - vgpu for newer nvidia drivers: https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher
-
-# HEY
-- (note to self) Add these references somewhere above: vgpu looking glass virt-manager guide: https://github.com/tuh8888/libvirt_win10_vm

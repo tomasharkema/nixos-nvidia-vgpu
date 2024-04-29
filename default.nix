@@ -10,27 +10,9 @@ let
   wdys-driver-version = "537.70";
   grid-version = "16.2";
   kernel-at-least-6 = if lib.strings.versionAtLeast config.boot.kernelPackages.kernel.version "6.0" then "true" else "false";
-
-  #driver-version = "525.105.14";
-  #vgpu-driver-version = "525.105.14";
-
-  #driver-version = "525.105.17";
-  #vgpu-driver-version = "525.105.17";
 in
 let
-  # Using the pinned packages because these two problems arrose in the latest packages:
-  # version `GLIBC_2.38' not found when trying to run the VM in nvidia-vgpu-mgr.service, maybe related to https://github.com/NixOS/nixpkgs/issues/287764
-  # boot.kernelPackages = patched_pkgs.linuxPackages_5_15 gave this error: https://discourse.nixos.org/t/cant-update-nvidia-driver-on-stable-branch/39246
-
-  inherit (pkgs.stdenv.hostPlatform) system;
-  patchedPkgs = import (fetchTarball {
-        url = "https://github.com/NixOS/nixpkgs/archive/468a37e6ba01c45c91460580f345d48ecdb5a4db.tar.gz";
-        sha256 = "sha256:057qsz43gy84myk4zc8806rd7nj4dkldfpn7wq6mflqa4bihvdka";
-    }) {
-    inherit system;
-    config.allowUnfree = true;
-  };
-  mdevctl = patchedPkgs.callPackage ./mdevctl {};
+  mdevctl = pkgs.callPackage ./mdevctl {};
   #frida = (builtins.getFlake "github:Yeshey/frida-nix").packages.${system}.frida-tools; # if not using a flake, you can use this with --impure
   frida = pkgs.python310Packages.frida-python; #inputs.frida.packages.${system}.frida-tools;
 
@@ -161,8 +143,8 @@ in
               '';
             };
             getFromRemote = lib.mkOption {
-              default = {};
-              type = lib.types.package;
+              default = null;
+              type = lib.types.nullOr lib.types.package;
               #example = "525.105.17";
               description = ''
                 If you have your merged driver online you can use this. 
@@ -189,33 +171,6 @@ in
         };
         default = {};
       };
-
-      /*
-      useMyDriver.enable = lib.mkOption {
-        default = false;
-        type = lib.types.bool;
-        description = ''
-          If enabled, the module won't compile the merged driver from the normal nvidia driver and the vgpu driver.
-          You will be asked to add the driver to the store with nix-store --add-fixed sha256 file.zip
-          Can be useful if you already compiled a driver or if you needed to add a vcfgclone line for your graphics card that hasn't been added to the VGPU-Community-Drivers repo and compile your driver with that. 
-        '';
-      };
-      useMyDriver.sha256 = lib.mkOption {
-        default = "";
-        type = lib.types.str;
-        example = "sha256-g8BM1g/tYv3G9vTKs581tfSpjB6ynX2+FaIOyFcDfdI=";
-        description = ''
-          The sha256 for the driver you compiled. Find it by running `nix hash file fileName.run`
-        '';
-      };
-      useMyDriver.name = lib.mkOption {
-        default = "";
-        type = lib.types.str;
-        example = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched.run";
-        description = ''
-          Name of your compiled driver
-        '';
-      }; */
 
       # submodule
       fastapi-dls = lib.mkOption {
@@ -254,8 +209,6 @@ in
   };
 
   config = lib.mkMerge [ ( lib.mkIf cfg.enable {
-
-    boot.kernelPackages = patchedPkgs.linuxPackages_5_15; # needed for this linuxPackages_5_19
   
     hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable.overrideAttrs ( # CHANGE stable to legacy_470 to pin the version of the driver if it stops working
       { patches ? [], postUnpack ? "", postPatch ? "", preFixup ? "", ... }@attrs: {
@@ -269,7 +222,7 @@ in
       src = if (!cfg.useMyDriver.enable) then
         "${compiled-driver}/NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched.run"
         else
-          if (cfg.useMyDriver.getFromRemote != {}) then
+          if (cfg.useMyDriver.getFromRemote != null) then
             cfg.useMyDriver.getFromRemote
           else
             pkgs.requireFile {
@@ -282,7 +235,7 @@ in
               #
               hash = cfg.useMyDriver.sha256;
             };
-      # src = patchedPkgs.fetchurl {
+      # src = pkgs.fetchurl {
       #         name = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
       #         url = "https://drive.usercontent.google.com/download?id=17NN0zZcoj-uY2BELxY2YqGvf6KtZNXhG&export=download&authuser=0&confirm=t&uuid=b70e0e36-34df-4fde-a86b-4d41d21ce483&at=APZUnTUfGnSmFiqhIsCNKQjPLEk3%3A1714043345939";
       #         sha256 = "sha256-g8BM1g/tYv3G9vTKs581tfSpjB6ynX2+FaIOyFcDfdI=";
@@ -293,15 +246,15 @@ in
         sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
 
         substituteInPlace sriov-manage \
-          --replace lspci ${patchedPkgs.pciutils}/bin/lspci \
-          --replace setpci ${patchedPkgs.pciutils}/bin/setpci
+          --replace lspci ${pkgs.pciutils}/bin/lspci \
+          --replace setpci ${pkgs.pciutils}/bin/setpci
       '' else ''
         # Move path for vgpuConfig.xml into /etc
         sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
 
         substituteInPlace sriov-manage \
-          --replace lspci ${patchedPkgs.pciutils}/bin/lspci \
-          --replace setpci ${patchedPkgs.pciutils}/bin/setpci
+          --replace lspci ${pkgs.pciutils}/bin/lspci \
+          --replace setpci ${pkgs.pciutils}/bin/setpci
       '';
 
       /*
@@ -319,7 +272,7 @@ in
         for i in libnvidia-vgpu.so.${vgpu-driver-version} libnvidia-vgxcfg.so.${vgpu-driver-version}; do
           install -Dm755 "$i" "$out/lib/$i"
         done
-        patchelf --set-rpath ${patchedPkgs.stdenv.cc.cc.lib}/lib $out/lib/libnvidia-vgpu.so.${vgpu-driver-version}
+        patchelf --set-rpath ${pkgs.stdenv.cc.cc.lib}/lib $out/lib/libnvidia-vgpu.so.${vgpu-driver-version}
         install -Dm644 vgpuConfig.xml $out/vgpuConfig.xml
 
         for i in nvidia-vgpud nvidia-vgpu-mgr; do
@@ -378,7 +331,7 @@ in
       virtualisation.oci-containers.containers = {
         fastapi-dls = {
           image = "collinwebdesigns/fastapi-dls";
-          imageFile = patchedPkgs.dockerTools.pullImage {
+          imageFile = pkgs.dockerTools.pullImage {
             imageName = "collinwebdesigns/fastapi-dls";
             imageDigest = "sha256:6fa90ce552c4e9ecff9502604a4fd42b3e67f52215eb6d8de03a5c3d20cd03d1";
             sha256 = "1y642miaqaxxz3z8zkknk0xlvzxcbi7q7ylilnxhxfcfr7x7kfqa";
@@ -416,7 +369,7 @@ in
       };
 
       systemd.services.fastapi-dls-mgr = {
-        path = [ patchedPkgs.openssl ];
+        path = [ pkgs.openssl ];
         script = ''
         WORKING_DIR=${cfg.fastapi-dls.docker-directory}/fastapi-dls/cert
         CERT_CHANGED=false
