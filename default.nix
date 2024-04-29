@@ -1,15 +1,21 @@
 inputs: { pkgs, lib, config, ... }:
 
 let
-  driver-version = "535.129.03";
-  #driver-version = "525.105.14";
+  cfg = config.hardware.nvidia.vgpu;
+
+  driver-version = cfg.useMyDriver.driver-version; # "535.129.03";
   # grid driver and wdys driver aren't actually used, but their versions are needed to find some filenames
-  vgpu-driver-version = "535.129.03";
-  #vgpu-driver-version = "525.105.14";
+  vgpu-driver-version = cfg.useMyDriver.vgpu-driver-version; #"535.129.03";
   grid-driver-version = "535.129.03";
   wdys-driver-version = "537.70";
   grid-version = "16.2";
   kernel-at-least-6 = if lib.strings.versionAtLeast config.boot.kernelPackages.kernel.version "6.0" then "true" else "false";
+
+  #driver-version = "525.105.14";
+  #vgpu-driver-version = "525.105.14";
+
+  #driver-version = "525.105.17";
+  #vgpu-driver-version = "525.105.17";
 in
 let
   # Using the pinned packages because these two problems arrose in the latest packages:
@@ -19,17 +25,33 @@ let
   inherit (pkgs.stdenv.hostPlatform) system;
   patchedPkgs = import (fetchTarball {
         url = "https://github.com/NixOS/nixpkgs/archive/468a37e6ba01c45c91460580f345d48ecdb5a4db.tar.gz";
-        # url = "https://github.com/NixOS/nixpkgs/archive/06278c77b5d162e62df170fec307e83f1812d94b.tar.gz";
-        sha256 = "sha256:11ri51840scvy9531rbz32241l7l81sa830s90wpzvv86v276aqs";
+        sha256 = "sha256:057qsz43gy84myk4zc8806rd7nj4dkldfpn7wq6mflqa4bihvdka";
     }) {
     inherit system;
     config.allowUnfree = true;
   };
-  cfg = config.hardware.nvidia.vgpu;
   mdevctl = patchedPkgs.callPackage ./mdevctl {};
   #frida = (builtins.getFlake "github:Yeshey/frida-nix").packages.${system}.frida-tools; # if not using a flake, you can use this with --impure
-  frida = inputs.frida.packages.${system}.frida-tools;
-    
+  frida = pkgs.python310Packages.frida-python; #inputs.frida.packages.${system}.frida-tools;
+
+  combinedZipName = "NVIDIA-GRID-Linux-KVM-${vgpu-driver-version}-${wdys-driver-version}.zip";
+  requireFile = { name, ... }@args: pkgs.requireFile (rec {
+    inherit name;
+    url = "https://www.nvidia.com/object/vGPU-software-driver.html";
+    message = ''
+      Unfortunately, we cannot download file ${name} automatically.
+      This file can be extracted from ${combinedZipName}.
+      Please go to ${url} to download it yourself or ask the vgpu discord community for support (https://discord.com/invite/5rQsSV3Byq)
+      You can see the related nvidia driver versions here: https://docs.nvidia.com/grid/index.html. Add it to the Nix store
+      using either
+        nix-store --add-fixed sha256 ${name}
+      or
+        nix-prefetch-url --type sha256 file:///path/to/${name}
+
+      If you already added the file, maybe the sha256 is wrong, use `nix hash file ${name}` and the option vgpu_driver_src.sha256 to override the hardcoded hash.
+    '';
+  } // args);
+
   compiled-driver = pkgs.stdenv.mkDerivation rec {
     name = "driver-compile";
       nativeBuildInputs = [ pkgs.p7zip pkgs.unzip pkgs.coreutils pkgs.bash pkgs.zstd];
@@ -44,13 +66,19 @@ let
           deepClone = true;
         };
         original_driver_src = pkgs.fetchurl {
+          # Hosted by nvidia
           url = "https://download.nvidia.com/XFree86/Linux-x86_64/${driver-version}/NVIDIA-Linux-x86_64-${driver-version}.run";
           sha256 = "e6dca5626a2608c6bb2a046cfcb7c1af338b9e961a7dd90ac09bb8a126ff002e";
         };
-        vgpu_driver_src = pkgs.fetchurl {
-          url = "https://github.com/justin-himself/NVIDIA-VGPU-Driver-Archive/releases/download/${grid-version}/NVIDIA-GRID-Linux-KVM-${driver-version}-${wdys-driver-version}.zip";
-          sha256 = "b458037fb652219464bc898efbd62096b2e298624c67f7f3db9823513d137c3a";
-        };
+        vgpu_driver_src = requireFile {
+            name = "NVIDIA-GRID-Linux-KVM-${driver-version}-${wdys-driver-version}.zip";
+            sha256 = cfg.vgpu_driver_src.sha256; # nix hash file foo.txt
+          };
+        #vgpu_driver_src = pkgs.fetchurl {
+        #   url = "https://sitewithdriver.com/releases/download/${grid-version}/NVIDIA-GRID-Linux-KVM-${driver-version}-${wdys-driver-version}.zip";
+        #   sha256 = "b458037fb652219464bc898efbd62096b2e298624c67f7f3db9823513d137c3a";
+        #};
+ 
         buildPhase = ''
           mkdir -p $out
           cd $TMPDIR
@@ -66,18 +94,18 @@ let
         '';
   };
 
-  vgpu_unlock = patchedPkgs.python310Packages.buildPythonPackage {
+  vgpu_unlock = pkgs.python310Packages.buildPythonPackage {
     pname = "nvidia-vgpu-unlock";
     version = "unstable-2021-04-22";
 
-    src = patchedPkgs.fetchFromGitHub {
+    src = pkgs.fetchFromGitHub {
       owner = "Yeshey";
       repo = "vgpu_unlock";
       rev = "7db331d4a2289ff6c1fb4da50cf445d9b4227421";
       sha256 = "sha256-K7e/9q7DmXrrIFu4gsTv667bEOxRn6nTJYozP1+RGHs=";
     };
 
-    propagatedBuildInputs = [ frida ];
+    propagatedBuildInputs = [ pkgs.python310Packages.frida-python ];
     
     doCheck = false; # Disable running checks during the build
     
@@ -85,7 +113,7 @@ let
       mkdir -p $out/bin
       cp vgpu_unlock $out/bin/
       substituteInPlace $out/bin/vgpu_unlock \
-              --replace /bin/bash ${patchedPkgs.bash}/bin/bash
+              --replace /bin/bash ${pkgs.bash}/bin/bash
     '';
   };
 in
@@ -93,6 +121,101 @@ in
   options = {
     hardware.nvidia.vgpu = {
       enable = lib.mkEnableOption "vGPU support";
+
+      vgpu_driver_src.sha256 = lib.mkOption {
+        default = "sha256-tFgDf7ZSIZRkvImO+9YglrLimGJMZ/fz25gjUT0TfDo=";
+        type = lib.types.str;
+        description = ''
+          sha256 of the vgpu_driver file in case you're having trouble adding it with for Example `nix-store --add-fixed sha256 NVIDIA-GRID-Linux-KVM-535.129.03-537.70.zip`
+          You can find the hash of the file with `nix hash file foo.txt`
+        '';
+      };
+
+      useMyDriver = lib.mkOption {
+        description = "Set up fastapi-dls host server";
+        type = with lib.types; submodule {
+          options = {
+            enable = lib.mkOption {
+              default = false;
+              type = lib.types.bool;
+              description = ''
+                If enabled, the module won't compile the merged driver from the normal nvidia driver and the vgpu driver.
+                You will be asked to add the driver to the store with nix-store --add-fixed sha256 file.zip
+                Can be useful if you already compiled a driver or if you needed to add a vcfgclone line for your graphics card that hasn't been added to the VGPU-Community-Drivers repo and compile your driver with that. 
+              '';
+            };
+            sha256 = lib.mkOption {
+              default = "";
+              type = lib.types.str;
+              example = "sha256-g8BM1g/tYv3G9vTKs581tfSpjB6ynX2+FaIOyFcDfdI=";
+              description = ''
+                The sha256 for the driver you compiled. Find it by running `nix hash file fileName.run`
+              '';
+            };
+            name = lib.mkOption {
+              default = "";
+              type = lib.types.str;
+              example = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched.run";
+              description = ''
+                Name of your compiled driver
+              '';
+            };
+            getFromRemote = lib.mkOption {
+              default = {};
+              type = lib.types.package;
+              #example = "525.105.17";
+              description = ''
+                If you have your merged driver online you can use this. 
+                If used, instead of asking to supply the driver with `nix-store --add-fixed sha256 file`, will grab it from the online source.
+              '';
+            };
+            driver-version = lib.mkOption {
+              default = "535.129.03";
+              type = lib.types.str;
+              example = "525.105.17";
+              description = ''
+                Name of your compiled driver
+              '';
+            };
+            vgpu-driver-version = lib.mkOption {
+              default = "535.129.03";
+              type = lib.types.str;
+              example = "525.105.17";
+              description = ''
+                Name of your compiled driver
+              '';
+            };
+          };
+        };
+        default = {};
+      };
+
+      /*
+      useMyDriver.enable = lib.mkOption {
+        default = false;
+        type = lib.types.bool;
+        description = ''
+          If enabled, the module won't compile the merged driver from the normal nvidia driver and the vgpu driver.
+          You will be asked to add the driver to the store with nix-store --add-fixed sha256 file.zip
+          Can be useful if you already compiled a driver or if you needed to add a vcfgclone line for your graphics card that hasn't been added to the VGPU-Community-Drivers repo and compile your driver with that. 
+        '';
+      };
+      useMyDriver.sha256 = lib.mkOption {
+        default = "";
+        type = lib.types.str;
+        example = "sha256-g8BM1g/tYv3G9vTKs581tfSpjB6ynX2+FaIOyFcDfdI=";
+        description = ''
+          The sha256 for the driver you compiled. Find it by running `nix hash file fileName.run`
+        '';
+      };
+      useMyDriver.name = lib.mkOption {
+        default = "";
+        type = lib.types.str;
+        example = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched.run";
+        description = ''
+          Name of your compiled driver
+        '';
+      }; */
 
       # submodule
       fastapi-dls = lib.mkOption {
@@ -130,18 +253,7 @@ in
     };
   };
 
-  config = lib.mkMerge [
-
- ( let
- 
-    patched_pkgs = import (fetchTarball {
-        url = "github:nixos/nixpkgs/468a37e6ba01c45c91460580f345d48ecdb5a4db";
-        sha256 = "sha256:11ri51840scvy9531rbz32241l7l81sa830s90wpzvv86v276aqs";
-    }) {
-    config.allowUnfree = true;
-  };
-
- in lib.mkIf cfg.enable {
+  config = lib.mkMerge [ ( lib.mkIf cfg.enable {
 
     boot.kernelPackages = patchedPkgs.linuxPackages_5_15; # needed for this linuxPackages_5_19
   
@@ -154,7 +266,22 @@ in
 
       # the new driver (getting from my Google drive)
       # the new driver (compiled in a derivation above)
-      src = "${compiled-driver}/NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched.run";
+      src = if (!cfg.useMyDriver.enable) then
+        "${compiled-driver}/NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched.run"
+        else
+          if (cfg.useMyDriver.getFromRemote != {}) then
+            cfg.useMyDriver.getFromRemote
+          else
+            pkgs.requireFile {
+              name = cfg.useMyDriver.name;
+              url = "compile it with the repo https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher 😉, also if you got this error the hash might be wrong, use `nix hash file <file>`";
+              # The hash below was computed like so:
+              #
+              # $ nix hash file foo.txt
+              # sha256-9fhYGu9fqxcQC2Kc81qh2RMo1QcLBUBo8U+pPn+jthQ=
+              #
+              hash = cfg.useMyDriver.sha256;
+            };
       # src = patchedPkgs.fetchurl {
       #         name = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
       #         url = "https://drive.usercontent.google.com/download?id=17NN0zZcoj-uY2BELxY2YqGvf6KtZNXhG&export=download&authuser=0&confirm=t&uuid=b70e0e36-34df-4fde-a86b-4d41d21ce483&at=APZUnTUfGnSmFiqhIsCNKQjPLEk3%3A1714043345939";

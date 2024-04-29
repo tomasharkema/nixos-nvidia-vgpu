@@ -85,11 +85,6 @@ This currently downlaods and installs a merged driver that I built, gets it from
 - kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 22.11.20230428.7449971`. 
 - kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 23.05.20230605.70f7275`.
 - kernel `5.15.82` with a `NVIDIA GeForce RTX 2060 Mobile` in `NNixOS 23.11.20240403.1487bde (Tapir) x86_64`.
-    
-    TODO: Add mechanism to add more cards
-- Trust in https://github.com/justin-himself/NVIDIA-VGPU-Driver-Archive/tree/master
-  - The module fetches (what are supposed to be) unmodified nvidia drivers from this repo. If you don't trust it and you [have access to known good sources](https://gitlab.com/polloloco/vgpu-proxmox#nvidia-driver) you can verify the hashes of the .run files with them.
-- This was only tested on NixOS `23.05`. Might work with older versions, might not.
 
 ## Guest VM
 
@@ -274,10 +269,16 @@ If you don't trust my Google drive pre built driver, or if it doesn't have suppo
 
 ## To-Do
 
+    TODO: Add mechanism to add more cards
+- Trust in https://github.com/justin-himself/NVIDIA-VGPU-Driver-Archive/tree/master
+  - The module fetches (what are supposed to be) unmodified nvidia drivers from this repo. If you don't trust it and you [have access to known good sources](https://gitlab.com/polloloco/vgpu-proxmox#nvidia-driver) you can verify the hashes of the .run files with them.
+- This was only tested on NixOS `23.05`. Might work with older versions, might not.
+
 - Make a full guide for begginers on how to make virt-manager, looking-glass, windows VM with vgpu unlock in nixOS
 - Make it get the files it needs from <https://archive.biggerthanshit.com/> and compile the merged driver that it will install with the [community vgpu repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher), instead of grabbing the prebuilt version from your google drive. (check [this work](https://github.com/letmeiiiin/nixos-nvidia-vgpu) by [letmeiiiin](https://github.com/letmeiiiin))
 - Bring pinned pkgs to flake inputs and make frida follow it, issue: https://github.com/Yeshey/nixos-nvidia-vgpu/issues/4
 You should get a notification when your windows VM starts saying "Nvidia license acquired"
+- package mscompress to nixOS and add it to shell.nix (https://github.com/stapelberg/mscompress)
 
 ---
 
@@ -288,6 +289,7 @@ For more help [Join VGPU-Unlock discord for Support](https://discord.com/invite/
 I'm not an experienced nix developer and a lot of what's implemented here could be done in a better way. If anyone is interested in contributing, you may get in contact through the issues or my email (yesheysangpo@gmail.com) or simply make a pull request with details as to what it changes.
 
 Biggest problems of the module:
+- ~~Grabs merged driver from my google drive instead of compiling it~~(fixed by [letmeiiiin](https://github.com/letmeiiiin)'s [work](https://github.com/letmeiiiin/nixos-nvidia-vgpu)! Big thanks!)
 - ~~Commands need to be ran manually for the docker volume to work: Still needs `--impure`: `access to absolute path '/opt/docker' is forbidden in pure eval mode (use '--impure' to override)`~~ (fixed, `--impure` not needed anymore! Big thanks to [physics-enthusiast](https://github.com/physics-enthusiast)'s [contributions](https://github.com/Yeshey/nixos-nvidia-vgpu/pull/2))
 - ~~Needs `--impure` to run.~~
   - ~~`error: cannot call 'getFlake' on unlocked flake reference 'github:itstarsun/frida-nix'`, because of the line:~~
