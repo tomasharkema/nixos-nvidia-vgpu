@@ -12,12 +12,26 @@ let
   kernel-at-least-6 = if lib.strings.versionAtLeast config.boot.kernelPackages.kernel.version "6.0" then "true" else "false";
 in
 let
-  mdevctl = pkgs.callPackage ./mdevctl {};
+  inherit (pkgs.stdenv.hostPlatform) system;
+  flakePkgs = import (fetchTarball {
+        url = "https://github.com/NixOS/nixpkgs/archive/468a37e6ba01c45c91460580f345d48ecdb5a4db.tar.gz";
+        sha256 = "sha256:057qsz43gy84myk4zc8806rd7nj4dkldfpn7wq6mflqa4bihvdka";
+        # sha256 = "sha256:057qsz43gy84myk4zc8806rd7nj4dkldfpn7wq6mflqa4bihvdka"; ??? BREAKS Mdevctl WHY OMFG!!
+        # sha256 = "sha256:11ri51840scvy9531rbz32241l7l81sa830s90wpzvv86v276aqs";
+    }) {
+    inherit system;
+    config.allowUnfree = true;
+  };
+
+  #inherit (pkgs.stdenv.hostPlatform) system;
+  #flakePkgs = import inputs.nixpkgs { inherit system; };
+
+  mdevctl = flakePkgs.callPackage ./mdevctl {};
   #frida = (builtins.getFlake "github:Yeshey/frida-nix").packages.${system}.frida-tools; # if not using a flake, you can use this with --impure
-  frida = pkgs.python310Packages.frida-python; #inputs.frida.packages.${system}.frida-tools;
+  frida = flakePkgs.python310Packages.frida-python; #inputs.frida.packages.${system}.frida-tools;
 
   combinedZipName = "NVIDIA-GRID-Linux-KVM-${vgpu-driver-version}-${wdys-driver-version}.zip";
-  requireFile = { name, ... }@args: pkgs.requireFile (rec {
+  requireFile = { name, ... }@args: flakePkgs.requireFile (rec {
     inherit name;
     url = "https://www.nvidia.com/object/vGPU-software-driver.html";
     message = ''
@@ -34,11 +48,11 @@ let
     '';
   } // args);
 
-  compiled-driver = pkgs.stdenv.mkDerivation rec {
+  compiled-driver = flakePkgs.stdenv.mkDerivation rec {
     name = "driver-compile";
-      nativeBuildInputs = [ pkgs.p7zip pkgs.unzip pkgs.coreutils pkgs.bash pkgs.zstd];
+      nativeBuildInputs = [ flakePkgs.p7zip flakePkgs.unzip flakePkgs.coreutils flakePkgs.bash flakePkgs.zstd];
         system = "x86_64-linux";
-        src = pkgs.fetchFromGitHub {
+        src = flakePkgs.fetchFromGitHub {
           owner = "letmeiiiin";
           repo = "vGPU-Unlock-patcher";
           # 535.129
@@ -47,7 +61,7 @@ let
           fetchSubmodules = true;
           deepClone = true;
         };
-        original_driver_src = pkgs.fetchurl {
+        original_driver_src = flakePkgs.fetchurl {
           # Hosted by nvidia
           url = "https://download.nvidia.com/XFree86/Linux-x86_64/${driver-version}/NVIDIA-Linux-x86_64-${driver-version}.run";
           sha256 = "e6dca5626a2608c6bb2a046cfcb7c1af338b9e961a7dd90ac09bb8a126ff002e";
@@ -56,7 +70,7 @@ let
             name = "NVIDIA-GRID-Linux-KVM-${driver-version}-${wdys-driver-version}.zip";
             sha256 = cfg.vgpu_driver_src.sha256; # nix hash file foo.txt
           };
-        #vgpu_driver_src = pkgs.fetchurl {
+        #vgpu_driver_src = flakePkgs.fetchurl {
         #   url = "https://sitewithdriver.com/releases/download/${grid-version}/NVIDIA-GRID-Linux-KVM-${driver-version}-${wdys-driver-version}.zip";
         #   sha256 = "b458037fb652219464bc898efbd62096b2e298624c67f7f3db9823513d137c3a";
         #};
@@ -67,7 +81,7 @@ let
           #ln -s $original_driver_src NVIDIA-Linux-x86_64-${driver-version}.run
           ln -s $vgpu_driver_src NVIDIA-GRID-Linux-KVM-${driver-version}-${wdys-driver-version}.zip
           
-          ${pkgs.unzip}/bin/unzip -j NVIDIA-GRID-Linux-KVM-${driver-version}-${wdys-driver-version}.zip Host_Drivers/NVIDIA-Linux-x86_64-${driver-version}-vgpu-kvm.run
+          ${flakePkgs.unzip}/bin/unzip -j NVIDIA-GRID-Linux-KVM-${driver-version}-${wdys-driver-version}.zip Host_Drivers/NVIDIA-Linux-x86_64-${driver-version}-vgpu-kvm.run
           cp -a $src/* .
           cp -a $original_driver_src NVIDIA-Linux-x86_64-${driver-version}.run
           
@@ -80,7 +94,7 @@ let
     pname = "nvidia-vgpu-unlock";
     version = "unstable-2021-04-22";
 
-    src = pkgs.fetchFromGitHub {
+    src = flakePkgs.fetchFromGitHub {
       owner = "Yeshey";
       repo = "vgpu_unlock";
       rev = "7db331d4a2289ff6c1fb4da50cf445d9b4227421";
@@ -95,7 +109,7 @@ let
       mkdir -p $out/bin
       cp vgpu_unlock $out/bin/
       substituteInPlace $out/bin/vgpu_unlock \
-              --replace /bin/bash ${pkgs.bash}/bin/bash
+              --replace /bin/bash ${flakePkgs.bash}/bin/bash
     '';
   };
 in
@@ -225,7 +239,7 @@ in
           if (cfg.useMyDriver.getFromRemote != null) then
             cfg.useMyDriver.getFromRemote
           else
-            pkgs.requireFile {
+            flakePkgs.requireFile {
               name = cfg.useMyDriver.name;
               url = "compile it with the repo https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher 😉, also if you got this error the hash might be wrong, use `nix hash file <file>`";
               # The hash below was computed like so:
@@ -246,15 +260,15 @@ in
         sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
 
         substituteInPlace sriov-manage \
-          --replace lspci ${pkgs.pciutils}/bin/lspci \
-          --replace setpci ${pkgs.pciutils}/bin/setpci
+          --replace lspci ${flakePkgs.pciutils}/bin/lspci \
+          --replace setpci ${flakePkgs.pciutils}/bin/setpci
       '' else ''
         # Move path for vgpuConfig.xml into /etc
         sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
 
         substituteInPlace sriov-manage \
-          --replace lspci ${pkgs.pciutils}/bin/lspci \
-          --replace setpci ${pkgs.pciutils}/bin/setpci
+          --replace lspci ${flakePkgs.pciutils}/bin/lspci \
+          --replace setpci ${flakePkgs.pciutils}/bin/setpci
       '';
 
       /*
@@ -272,7 +286,7 @@ in
         for i in libnvidia-vgpu.so.${vgpu-driver-version} libnvidia-vgxcfg.so.${vgpu-driver-version}; do
           install -Dm755 "$i" "$out/lib/$i"
         done
-        patchelf --set-rpath ${pkgs.stdenv.cc.cc.lib}/lib $out/lib/libnvidia-vgpu.so.${vgpu-driver-version}
+        patchelf --set-rpath ${flakePkgs.stdenv.cc.cc.lib}/lib $out/lib/libnvidia-vgpu.so.${vgpu-driver-version}
         install -Dm644 vgpuConfig.xml $out/vgpuConfig.xml
 
         for i in nvidia-vgpud nvidia-vgpu-mgr; do
@@ -293,7 +307,7 @@ in
       serviceConfig = {
         Type = "forking";
         ExecStart = "${vgpu_unlock}/bin/vgpu_unlock ${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpud";
-        ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpud";
+        ExecStopPost = "${flakePkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpud";
         Environment = [ "__RM_NO_VERSION_CHECK=1" ]; # Avoids issue with API version incompatibility when merging host/client drivers
       };
     };
@@ -307,7 +321,7 @@ in
         Type = "forking";
         KillMode = "process";
         ExecStart = "${vgpu_unlock}/bin/vgpu_unlock ${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpu-mgr";
-        ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpu-mgr";
+        ExecStopPost = "${flakePkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpu-mgr";
         Environment = [ "__RM_NO_VERSION_CHECK=1"];
       };
     };
@@ -331,7 +345,7 @@ in
       virtualisation.oci-containers.containers = {
         fastapi-dls = {
           image = "collinwebdesigns/fastapi-dls";
-          imageFile = pkgs.dockerTools.pullImage {
+          imageFile = flakePkgs.dockerTools.pullImage {
             imageName = "collinwebdesigns/fastapi-dls";
             imageDigest = "sha256:6fa90ce552c4e9ecff9502604a4fd42b3e67f52215eb6d8de03a5c3d20cd03d1";
             sha256 = "1y642miaqaxxz3z8zkknk0xlvzxcbi7q7ylilnxhxfcfr7x7kfqa";
@@ -369,7 +383,7 @@ in
       };
 
       systemd.services.fastapi-dls-mgr = {
-        path = [ pkgs.openssl ];
+        path = [ flakePkgs.openssl ];
         script = ''
         WORKING_DIR=${cfg.fastapi-dls.docker-directory}/fastapi-dls/cert
         CERT_CHANGED=false

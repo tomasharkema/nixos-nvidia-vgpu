@@ -21,12 +21,25 @@ echo "Please configure the VM, for example, its USB devices, from the virt-manag
 
 echo "Creating Virtual GPUs..."
 
-sudo bash -c '
-    mdevctl start -u ce851576-7e81-46f1-96e1-718da691e53e -p 0000:01:00.0 --type nvidia-333
-    mdevctl start -u b761f485-1eac-44bc-8ae6-2a3569881a1a -p 0000:01:00.0 --type nvidia-333
-    mdevctl define --auto --uuid ce851576-7e81-46f1-96e1-718da691e53e
-    mdevctl define --auto --uuid b761f485-1eac-44bc-8ae6-2a3569881a1a
-'
+# Generate UUIDs
+uuid1="ce851576-7e81-46f1-96e1-718da691e53e" # generated with uuidgen
+uuid2="b761f485-1eac-44bc-8ae6-2a3569881a1a"
+# Define device profiles
+profile="nvidia-333" # (3GB profile, need to divide evenly, so I get two profiles for my 6GB graphics driver)
+# delete all existing ones
+uuids=$(sudo mdevctl list -d | awk '{print $1}')
+for uuid in $uuids; do
+    echo $uuid
+    sudo mdevctl undefine --uuid $uuid
+    sudo mdevctl stop --uuid $uuid
+done
+# Start and define mdev devices
+sudo bash -c "
+    mdevctl start -u $uuid1 -p 0000:01:00.0 --type $profile
+    mdevctl start -u $uuid2 -p 0000:01:00.0 --type $profile
+    mdevctl define --auto --uuid $uuid1
+    mdevctl define --auto --uuid $uuid2
+"
 
 # Sometimes LG fails, this prevents that
 sudo touch /dev/shm/looking-glass
