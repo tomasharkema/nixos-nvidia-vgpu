@@ -16,11 +16,11 @@
     #};
   };
 
-  outputs = { self, systems, /*nixpkgs,*/ ... }@inputs: 
+  outputs = { self, systems, nixpkgs, ... }@inputs: 
     let
 
     in {
-      nixosModules.nvidia-vgpu = import ./default.nix inputs; #{ inherit inputs; };
+      nixosModules.nvidia-vgpu = import ./default.nix inputs;
     };
 }
 
