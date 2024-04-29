@@ -25,7 +25,7 @@ This module unlocks vGPU functionality on your consumer nvidia card.
        nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
 
        nixos-nvidia-vgpu = {
-         url = "github:Yeshey/nixos-nvidia-vgpu/master";
+         url = "github:Yeshey/nixos-nvidia-vgpu/535.129";
          inputs.nixpkgs.follows = "nixpkgs";
        };
      };
