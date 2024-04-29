@@ -1,5 +1,5 @@
 #!/bin/bash
-# THis is a script you can modify and use to create the virtual gpus start the VM and launch looking glass. The 
+# This is a script you can modify and use to create the virtual gpus start the VM and launch looking glass.
 # Note that you should change the IDs of the mdevctl vGPUs and the name of the VM "win10"
 
 
