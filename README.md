@@ -58,7 +58,6 @@ This module unlocks vGPU functionality on your consumer nvidia card.
 ```
 - This will attempt to compile and install the driver `535.129.03`, you will be prompted to add it with `nix-store --add-fixed...`, you'll need to get the file [from nvidia](https://www.nvidia.com/object/vGPU-software-driver.html), you have to sign up and request and it might take some days. Refer to the [Discord VGPU-Unlock Community](https://discord.com/invite/5rQsSV3Byq) for support.  
 If you're still getting the `Unfortunately, we cannot download file...` error, use the option `vgpu_driver_src.sha256` to override the hardcoded hash. Find the hash of the file with `nix hash file file.zip`.
-- `fastapi-dls` allows unrestricted access on guests.
 - If you have a compiled merge driver, you can directly use it with the `useMyDriver` option. Here is an example using the driver in my google drive:
   ```nix
   {
@@ -183,7 +182,7 @@ Also test `mdevctl types`, if there is no output, maybe your graphics card isn't
 
 You can also check if the services `nvidia-vgpu-mgr` and `nvidia-vgpud` executed without errors with `systemctl status nvidia-vgpud` and `systemctl status nvidia-vgpu-mgr`. (or something like `journalctl -fu nvidia-vgpud` to see the logs in real time)
 
-If you set up fastapi-dls correctly, you should get a notification when your windows VM starts saying "nvidia license aquiered". In the Linux or Windows guest you can also run `nvidia-smi -q  | grep -i "License"` or `& 'nvidia-smi' -q | Select-String "License"` respectively to check if it's licensed.
+If you set up fastapi-dls correctly, you should get a notification when your windows VM starts saying it was successful. In the Linux or Windows guest you can also run `nvidia-smi -q  | grep -i "License"` or `& 'nvidia-smi' -q | Select-String "License"` respectively to check.
 
 I've tested creating an mdev on my own `NVIDIA GeForce RTX 2060 Mobile` by running:
 ```bash
