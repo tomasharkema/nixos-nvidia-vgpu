@@ -12,19 +12,30 @@ let
   kernel-at-least-6 = if lib.strings.versionAtLeast config.boot.kernelPackages.kernel.version "6.0" then "true" else "false";
 in
 let
+/*
   inherit (pkgs.stdenv.hostPlatform) system;
   flakePkgs = import (fetchTarball {
-        url = "https://github.com/NixOS/nixpkgs/archive/468a37e6ba01c45c91460580f345d48ecdb5a4db.tar.gz";
-        sha256 = "sha256:057qsz43gy84myk4zc8806rd7nj4dkldfpn7wq6mflqa4bihvdka";
-        # sha256 = "sha256:057qsz43gy84myk4zc8806rd7nj4dkldfpn7wq6mflqa4bihvdka"; ??? BREAKS Mdevctl WHY OMFG!!
-        # sha256 = "sha256:11ri51840scvy9531rbz32241l7l81sa830s90wpzvv86v276aqs";
+        #url = "https://github.com/NixOS/nixpkgs/archive/468a37e6ba01c45c91460580f345d48ecdb5a4db.tar.gz";
+        #sha256 = "sha256:057qsz43gy84myk4zc8806rd7nj4dkldfpn7wq6mflqa4bihvdka";
+
+        #url = "github:NixOS/nixpkgs/nixos-22.11";
+        #sha256 = "sha256:057qsz43gy84myk4zc8806rd7nj4dkldfpn7wq6mflqa4bihvdka";
+
+        #url = "github:NixOS/nixpkgs/nixos-23.05";
+        #sha256 = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+
+        url = "github:NixOS/nixpkgs/nixos-unstable";
+        sha256 = "";
+
     }) {
     inherit system;
     config.allowUnfree = true;
   };
+  */
 
-  #inherit (pkgs.stdenv.hostPlatform) system;
-  #flakePkgs = import inputs.nixpkgs { inherit system; };
+  inherit (pkgs.stdenv.hostPlatform) system;
+  flakePkgs = import inputs.nixpkgs { inherit system; config.allowUnfree = true; };
+  #flakePkgs = pkgs;
 
   mdevctl = flakePkgs.callPackage ./mdevctl {};
   #frida = (builtins.getFlake "github:Yeshey/frida-nix").packages.${system}.frida-tools; # if not using a flake, you can use this with --impure
@@ -88,9 +99,13 @@ let
           bash ./patch.sh --repack --lk6-patches general-merge 
           cp -a NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched.run $out
         '';
+        env = {
+          LD_LIBRARY_PATH = "LD_LIBRARY_PATH:${pkgs.glib.out}/lib";
+          LD_PRELOAD = "LD_PRELOAD:${pkgs.glib.out}/lib";
+        };
   };
 
-  vgpu_unlock = pkgs.python310Packages.buildPythonPackage {
+  vgpu_unlock = flakePkgs.python310Packages.buildPythonPackage {
     pname = "nvidia-vgpu-unlock";
     version = "unstable-2021-04-22";
 
@@ -101,7 +116,12 @@ let
       sha256 = "sha256-K7e/9q7DmXrrIFu4gsTv667bEOxRn6nTJYozP1+RGHs=";
     };
 
-    propagatedBuildInputs = [ pkgs.python310Packages.frida-python ];
+    env = {
+      LD_LIBRARY_PATH = "LD_LIBRARY_PATH:${pkgs.glib.out}/lib";
+      LD_PRELOAD = "LD_PRELOAD:${pkgs.glib.out}/lib";
+    };
+
+    propagatedBuildInputs = [ flakePkgs.python310Packages.frida-python ];
     
     doCheck = false; # Disable running checks during the build
     
@@ -322,7 +342,7 @@ in
         KillMode = "process";
         ExecStart = "${vgpu_unlock}/bin/vgpu_unlock ${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpu-mgr";
         ExecStopPost = "${flakePkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpu-mgr";
-        Environment = [ "__RM_NO_VERSION_CHECK=1"];
+        Environment = [ "__RM_NO_VERSION_CHECK=1" "LD_LIBRARY_PATH=LD_LIBRARY_PATH:${pkgs.glib.out}/lib" "LD_PRELOAD=LD_PRELOAD:${pkgs.glib.out}/lib" "LD_PRELOAD=${pkgs.glib.out}/lib" ];
       };
     };
     
