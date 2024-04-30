@@ -217,8 +217,6 @@ In the case of the merged driver you'll have to get the vgpu driver and the norm
 ## To-Do
 
 - Add mechanism to add more cards
-- Bring pinned pkgs to flake inputs and make frida follow it, issue: https://github.com/Yeshey/nixos-nvidia-vgpu/issues/4
-You should get a notification when your windows VM starts saying "Nvidia license acquired"
 - package mscompress to nixOS and add it to shell.nix (https://github.com/stapelberg/mscompress)
 
 ---
