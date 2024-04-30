@@ -35,15 +35,14 @@ let
 
   inherit (pkgs.stdenv.hostPlatform) system;
   flakePkgs = import inputs.nixpkgs { inherit system; config.allowUnfree = true; };
-  fridaPkgs = import inputs.nixpkgs-frida { inherit system; config.allowUnfree = true; };
-  nixos2311Pkgs = import inputs.nixpkgs-frida { inherit system; config.allowUnfree = true; };
+  nixos2311Pkgs = import inputs.nixpkgs-nixos2311 { inherit system; config.allowUnfree = true; };
   #flakePkgs = pkgs;
 
-  mdevctl = fridaPkgs.callPackage ./mdevctl {};
+  mdevctl = nixos2311Pkgs.callPackage ./mdevctl {};
   #frida = (builtins.getFlake "github:Yeshey/frida-nix").packages.${system}.frida-tools; # if not using a flake, you can use this with --impure
   #frida = flakePkgs.python310Packages.frida-python; #inputs.frida.packages.${system}.frida-tools;
-  frida-tools = inputs.frida.packages.${system}.frida-tools;
-  frida-python = inputs.frida.packages.${system}.frida-python;
+  #frida-tools = inputs.frida.packages.${system}.frida-tools;
+  #frida-python = inputs.frida.packages.${system}.frida-python;
 
   combinedZipName = "NVIDIA-GRID-Linux-KVM-${vgpu-driver-version}-${wdys-driver-version}.zip";
   requireFile = { name, ... }@args: flakePkgs.requireFile (rec {
@@ -81,14 +80,14 @@ let
           url = "https://download.nvidia.com/XFree86/Linux-x86_64/${driver-version}/NVIDIA-Linux-x86_64-${driver-version}.run";
           sha256 = "e6dca5626a2608c6bb2a046cfcb7c1af338b9e961a7dd90ac09bb8a126ff002e";
         };
-        # vgpu_driver_src = requireFile {
-        #     name = "NVIDIA-GRID-Linux-KVM-${driver-version}-${wdys-driver-version}.zip";
-        #     sha256 = cfg.vgpu_driver_src.sha256; # nix hash file foo.txt
-        #   };
-        vgpu_driver_src = nixos2311Pkgs.fetchurl {
-          url = "https://sitewithdriver.com/releases/download/${grid-version}/NVIDIA-GRID-Linux-KVM-${driver-version}-${wdys-driver-version}.zip";
-          sha256 = "b458037fb652219464bc898efbd62096b2e298624c67f7f3db9823513d137c3a";
-        };
+        vgpu_driver_src = requireFile {
+            name = "NVIDIA-GRID-Linux-KVM-${driver-version}-${wdys-driver-version}.zip";
+            sha256 = cfg.vgpu_driver_src.sha256; # nix hash file foo.txt
+          };
+        #vgpu_driver_src = nixos2311Pkgs.fetchurl {
+        #  url = "https://sitewithdriver.com/releases/download/${grid-version}/NVIDIA-GRID-Linux-KVM-${driver-version}-${wdys-driver-version}.zip";
+        #  sha256 = "b458037fb652219464bc898efbd62096b2e298624c67f7f3db9823513d137c3a";
+        #};
  
         buildPhase = ''
           mkdir -p $out
@@ -109,11 +108,11 @@ let
         # };
   };
 
-  vgpu_unlock = fridaPkgs.python310Packages.buildPythonPackage {
+  vgpu_unlock = nixos2311Pkgs.python310Packages.buildPythonPackage {
     pname = "nvidia-vgpu-unlock";
     version = "unstable-2021-04-22";
 
-    src = fridaPkgs.fetchFromGitHub {
+    src = nixos2311Pkgs.fetchFromGitHub {
       owner = "Yeshey";
       repo = "vgpu_unlock";
       rev = "7db331d4a2289ff6c1fb4da50cf445d9b4227421";
@@ -125,7 +124,7 @@ let
     #   LD_PRELOAD = "LD_PRELOAD:${pkgs.glib.out}/lib";
     # };
 
-    propagatedBuildInputs = [ fridaPkgs.python310Packages.frida-python ];
+    propagatedBuildInputs = [ nixos2311Pkgs.python310Packages.frida-python ];
     
     doCheck = false; # Disable running checks during the build
     
@@ -133,7 +132,7 @@ let
       mkdir -p $out/bin
       cp vgpu_unlock $out/bin/
       substituteInPlace $out/bin/vgpu_unlock \
-              --replace /bin/bash ${fridaPkgs.bash}/bin/bash
+              --replace /bin/bash ${nixos2311Pkgs.bash}/bin/bash
     '';
   };
 in
