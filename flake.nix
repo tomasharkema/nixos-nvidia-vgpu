@@ -10,17 +10,23 @@
     #nixpkgs.url = "github:NixOS/nixpkgs/nixos-22.11";
     #nixpkgs.url = "https://github.com/NixOS/nixpkgs/archive/06278c77b5d162e62df170fec307e83f1812d94b.tar.gz";
     nixpkgs = {
-      url = "https://github.com/NixOS/nixpkgs/archive/06278c77b5d162e62df170fec307e83f1812d94b.tar.gz";
+      url = "https://github.com/NixOS/nixpkgs/archive/06278c77b5d162e62df170fec307e83f1812d94b.tar.gz"; # doesnt have glibc error
       # sha256 = "sha256:11ri51840scvy9531rbz32241l7l81sa830s90wpzvv86v276aqs";
     };
-    #frida = {
+    nixpkgs-frida = {
+      url = "https://github.com/NixOS/nixpkgs/archive/d5994dc91c226cc7ca9e869bad464805cf3d65c0.tar.gz"; # first commit with frida
+    };
+    nixpkgs-nixos2311 = {
+      url = "github:NixOS/nixpkgs/nixos-23.11"; # first commit with frida
+    };
+    frida = {
       #url = "github:itstarsun/frida-nix";
-    #  url = "github:Yeshey/frida-nix";
+      url = "github:Yeshey/frida-nix";
       #inputs.nixpkgs.follows = "nixpkgs";
-    #};
+    };
   };
 
-  outputs = { self, nixpkgs, ... }@inputs: 
+  outputs = { self, nixpkgs, nixpkgs-frida, nixpkgs-nixos2311,... }@inputs: 
     let
 
     in {
