@@ -58,6 +58,7 @@ This module unlocks vGPU functionality on your consumer nvidia card.
 ```
 - This will attempt to compile and install the driver `535.129.03`, you will be prompted to add it with `nix-store --add-fixed...`, you'll need to get the file [from nvidia](https://www.nvidia.com/object/vGPU-software-driver.html), you have to sign up and request and it might take some days. Refer to the [Discord VGPU-Unlock Community](https://discord.com/invite/5rQsSV3Byq) for support.  
 If you're still getting the `Unfortunately, we cannot download file...` error, use the option `vgpu_driver_src.sha256` to override the hardcoded hash. Find the hash of the file with `nix hash file file.zip`.
+- You might also have to check your kernel, I only managed to make it work with `patchedPkgs.linuxPackages_5_15;` from below, without it `mdevctl types` shows nothing. 
 - If you have a compiled merge driver, you can directly use it with the `useMyDriver` option. Here is an example using the driver in my google drive:
   ```nix
   {
