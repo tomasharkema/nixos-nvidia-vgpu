@@ -4,7 +4,7 @@ let
   cfg = config.hardware.nvidia.vgpu;
 
   mdevctl = pkgs.callPackage ./mdevctl {};
-  pythonPackages = pkgs.python39Packages;
+  pythonPackages = pkgs.python311Packages;
   frida = pythonPackages.callPackage ./frida {};
 
   vgpuVersion = "460.32.04";
