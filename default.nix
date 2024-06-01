@@ -5,7 +5,7 @@ let
 
   mdevctl = pkgs.callPackage ./mdevctl {};
   pythonPackages = pkgs.python311Packages;
-  frida = pythonPackages.callPackage ./frida {};
+  # frida = pythonPackages.callPackage ./frida {};
 
   vgpuVersion = "460.32.04";
   gridVersion = "460.32.03";
@@ -51,7 +51,7 @@ let
       sha256 = "0s8bmscb8irj1sggfg1fhacqd1lh59l326bnrk4a2g4qngsbkix3";
     };
 
-    buildInputs = [ (pythonPackages.python.withPackages (p: [ frida ])) ];
+    buildInputs = [ (pythonPackages.python.withPackages (p: [ p.frida ])) ];
 
     postPatch = ''
       substituteInPlace vgpu_unlock \
