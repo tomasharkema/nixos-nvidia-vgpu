@@ -51,7 +51,7 @@ let
       sha256 = "0s8bmscb8irj1sggfg1fhacqd1lh59l326bnrk4a2g4qngsbkix3";
     };
 
-    buildInputs = [ (pythonPackages.python.withPackages (p: [ p.frida ])) ];
+    buildInputs = [ (pythonPackages.python.withPackages (p: [ p.frida-python ])) ];
 
     postPatch = ''
       substituteInPlace vgpu_unlock \
