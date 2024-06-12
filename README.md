@@ -229,6 +229,7 @@ For more help [Join VGPU-Unlock discord for Support](https://discord.com/invite/
 I'm not an experienced nix developer and a lot of what's implemented here could be done in a better way. If anyone is interested in contributing, you may get in contact through the issues or simply make a pull request with details as to what it changes.
 
 Biggest problems of the module:
+- Some games stop working on host (Vulkan?), also possible core dump from nvidia-vgpud happening bc of frida?[issue on GPU Unlocking discord](https://discord.com/channels/829786927829745685/1192188752915869767)
 - ~~Grabs merged driver from my google drive instead of compiling it~~(fixed by [letmeiiiin](https://github.com/letmeiiiin)'s [work](https://github.com/letmeiiiin/nixos-nvidia-vgpu)! Big thanks!)
 - ~~Commands need to be ran manually for the docker volume to work: Still needs `--impure`: `access to absolute path '/opt/docker' is forbidden in pure eval mode (use '--impure' to override)`~~ (fixed, `--impure` not needed anymore! Big thanks to [physics-enthusiast](https://github.com/physics-enthusiast)'s [contributions](https://github.com/Yeshey/nixos-nvidia-vgpu/pull/2))
 - ~~Needs `--impure` to run.~~
