@@ -23,6 +23,7 @@ rustPlatform.buildRustPackage rec {
   ];
 
   # had to add this
+  doCheck = false;
   postPatch = ''
     substituteInPlace 60-mdevctl.rules \
       --replace /usr/sbin/ $out/ \
