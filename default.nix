@@ -58,7 +58,7 @@ let
       or
         nix-prefetch-url --type sha256 file:///path/to/${name}
 
-      If you already added the file, maybe the sha256 is wrong, use `nix hash file ${name}` and the option vgpu_driver_src.sha256 to override the hardcoded hash.
+      If you already added the file, maybe the sha256 is wrong, use "nix hash file ${name}" and the option vgpu_driver_src.sha256 to override the hardcoded hash.
     '';
   } // args);
 
