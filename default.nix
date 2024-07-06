@@ -62,7 +62,7 @@ let
     '';
   } // args);
 
-  compiled-driver = nixos2311Pkgs.stdenv.mkDerivation rec {
+  compiled-driver = nixos2311Pkgs.stdenv.mkDerivation {
     name = "driver-compile";
       nativeBuildInputs = [ nixos2311Pkgs.p7zip nixos2311Pkgs.unzip nixos2311Pkgs.coreutils nixos2311Pkgs.bash nixos2311Pkgs.zstd];
         system = "x86_64-linux";
@@ -137,68 +137,68 @@ let
   };
 in
 {
-  options = {
+  options = with lib; {
     hardware.nvidia.vgpu = {
-      enable = lib.mkEnableOption "vGPU support";
+      enable = mkEnableOption "vGPU support";
 
-      vgpu_driver_src.sha256 = lib.mkOption {
+      vgpu_driver_src.sha256 = mkOption {
         default = "sha256-tFgDf7ZSIZRkvImO+9YglrLimGJMZ/fz25gjUT0TfDo=";
-        type = lib.types.str;
+        type = types.str;
         description = ''
           sha256 of the vgpu_driver file in case you're having trouble adding it with for Example `nix-store --add-fixed sha256 NVIDIA-GRID-Linux-KVM-535.129.03-537.70.zip`
           You can find the hash of the file with `nix hash file foo.txt`
         '';
       };
 
-      useMyDriver = lib.mkOption {
+      useMyDriver = mkOption {
         description = "Set up fastapi-dls host server";
-        type = with lib.types; submodule {
+        type = types.submodule {
           options = {
-            enable = lib.mkOption {
+            enable = mkOption {
               default = false;
-              type = lib.types.bool;
+              type = types.bool;
               description = ''
                 If enabled, the module won't compile the merged driver from the normal nvidia driver and the vgpu driver.
                 You will be asked to add the driver to the store with nix-store --add-fixed sha256 file.zip
                 Can be useful if you already compiled a driver or if you needed to add a vcfgclone line for your graphics card that hasn't been added to the VGPU-Community-Drivers repo and compile your driver with that. 
               '';
             };
-            sha256 = lib.mkOption {
+            sha256 = mkOption {
               default = "";
-              type = lib.types.str;
+              type = types.str;
               example = "sha256-g8BM1g/tYv3G9vTKs581tfSpjB6ynX2+FaIOyFcDfdI=";
               description = ''
                 The sha256 for the driver you compiled. Find it by running `nix hash file fileName.run`
               '';
             };
-            name = lib.mkOption {
+            name = mkOption {
               default = "";
-              type = lib.types.str;
+              type = types.str;
               example = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched.run";
               description = ''
                 Name of your compiled driver
               '';
             };
-            getFromRemote = lib.mkOption {
+            getFromRemote = mkOption {
               default = null;
-              type = lib.types.nullOr lib.types.package;
+              type = types.nullOr types.package;
               #example = "525.105.17";
               description = ''
                 If you have your merged driver online you can use this. 
                 If used, instead of asking to supply the driver with `nix-store --add-fixed sha256 file`, will grab it from the online source.
               '';
             };
-            driver-version = lib.mkOption {
+            driver-version = mkOption {
               default = "535.129.03";
-              type = lib.types.str;
+              type = types.str;
               example = "525.105.17";
               description = ''
                 Name of your compiled driver
               '';
             };
-            vgpu-driver-version = lib.mkOption {
+            vgpu-driver-version = mkOption {
               default = "535.129.03";
-              type = lib.types.str;
+              type = types.str;
               example = "525.105.17";
               description = ''
                 Name of your compiled driver
@@ -210,32 +210,32 @@ in
       };
 
       # submodule
-      fastapi-dls = lib.mkOption {
+      fastapi-dls = mkOption {
         description = "Set up fastapi-dls host server";
-        type = with lib.types; submodule {
+        type = types.submodule {
           options = {
-            enable = lib.mkOption {
+            enable = mkOption {
               default = false;
-              type = lib.types.bool;
+              type = types.bool;
               description = "Set up fastapi-dls host server";
             };
-            docker-directory = lib.mkOption {
+            docker-directory = mkOption {
               description = "Path to your folder with docker containers";
               default = "/opt/docker";
               example = "/dockers";
-              type = lib.types.str;
+              type = types.str;
             };
-            local_ipv4 = lib.mkOption {
+            local_ipv4 = mkOption {
               description = "Your ipv4 or local hostname, needed for the fastapi-dls server. Leave blank to autodetect using hostname";
               default = "";
               example = "192.168.1.81";
-              type = lib.types.str;
+              type = types.str;
             };
-            timezone = lib.mkOption {
+            timezone = mkOption {
               description = "Your timezone according to this list: https://docs.diladele.com/docker/timezones.html, needs to be the same as in the VM. Leave blank to autodetect";
               default = "";
               example = "Europe/Lisbon";
-              type = lib.types.str;
+              type = types.str;
             };
           };
         };
