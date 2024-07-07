@@ -67,11 +67,12 @@ let
       nativeBuildInputs = [ nixos2311Pkgs.p7zip nixos2311Pkgs.unzip nixos2311Pkgs.coreutils nixos2311Pkgs.bash nixos2311Pkgs.zstd];
         system = "x86_64-linux";
         src = nixos2311Pkgs.fetchFromGitHub {
-          owner = "letmeiiiin";
+          owner = "VGPU-Community-Drivers";
           repo = "vGPU-Unlock-patcher";
           # 535.129
-          rev = "9a8100c71c4bf97f4e0658d2824d18def0ac846d";
-          hash = "sha256-rYb1+inH9NmFoBGJQQJQQRjPujrjC3owaSRCOOC/t3U=";
+          #rev = "535.129";
+          rev = "3765eee908858d069e7b31842f3486095b0846b5";
+          hash = "sha256-PR61ylYgTaWQ/xxMDR8ZUUA5vQNUcZvIt/hqgpAQeNM=";
           fetchSubmodules = true;
           deepClone = true;
         };
