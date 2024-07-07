@@ -100,7 +100,7 @@ let
           cp -a $src/* .
           cp -a $original_driver_src NVIDIA-Linux-x86_64-${driver-version}.run
           
-          bash ./patch.sh --repack --lk6-patches general-merge 
+          bash ./patch.sh --force-nvidia-gpl-I-know-it-is-wrong --enable-nvidia-gpl-for-experimenting --repack general-merge 
           cp -a NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched.run $out
         '';
         # env = {
@@ -271,7 +271,7 @@ in
               # $ nix hash file foo.txt
               # sha256-9fhYGu9fqxcQC2Kc81qh2RMo1QcLBUBo8U+pPn+jthQ=
               #
-              hash = cfg.useMyDriver.sha256;
+              sha256 = cfg.useMyDriver.sha256;
             };
       # src = pkgs.fetchurl {
       #         name = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
