@@ -2,6 +2,9 @@
 
 This module unlocks vGPU functionality on your consumer nvidia card.
 
+> [!WARNING]  
+> Activating this module may make some games stop working on the host, check [Issues](#issues).
+
 ## Installation:
 
 1. Add Module to nixOS
@@ -58,7 +61,7 @@ This module unlocks vGPU functionality on your consumer nvidia card.
 ```
 - This will attempt to compile and install the driver `535.129.03`, you will be prompted to add it with `nix-store --add-fixed...`, you'll need to get the file [from nvidia](https://www.nvidia.com/object/vGPU-software-driver.html), you have to sign up and request and it might take some days. Refer to the [Discord VGPU-Unlock Community](https://discord.com/invite/5rQsSV3Byq) for support.  
 If you're still getting the `Unfortunately, we cannot download file...` error, use the option `vgpu_driver_src.sha256` to override the hardcoded hash. Find the hash of the file with `nix hash file file.zip`.
-- You might also have to check your kernel, I only managed to make it work with `patchedPkgs.linuxPackages_5_15;` from below, without it `mdevctl types` shows nothing. 
+- You might also have to check your kernel, it should work with the kernel 6 series. 
 - If you have a compiled merge driver, you can directly use it with the `useMyDriver` option. Here is an example using the driver in my google drive:
   ```nix
   {
@@ -224,18 +227,20 @@ In the case of the merged driver you'll have to get the vgpu driver and the norm
 
 For more help [Join VGPU-Unlock discord for Support](https://discord.com/invite/5rQsSV3Byq)
 
-## Acknowledgements
-
-I'm not an experienced nix developer and a lot of what's implemented here could be done in a better way. If anyone is interested in contributing, you may get in contact through the issues or simply make a pull request with details as to what it changes.
+## Issues
 
 Biggest problems of the module:
-- Some games stop working on host (Vulkan?), also possible core dump from nvidia-vgpud happening bc of frida?[issue on GPU Unlocking discord](https://discord.com/channels/829786927829745685/1192188752915869767)
+- Some games stop working on host (Vulkan?), also possible core dump from nvidia-vgpud happening bc of frida? [Issue on GPU Unlocking discord](https://discord.com/channels/829786927829745685/1192188752915869767)
 - ~~Grabs merged driver from my google drive instead of compiling it~~(fixed by [letmeiiiin](https://github.com/letmeiiiin)'s [work](https://github.com/letmeiiiin/nixos-nvidia-vgpu)! Big thanks!)
 - ~~Commands need to be ran manually for the docker volume to work: Still needs `--impure`: `access to absolute path '/opt/docker' is forbidden in pure eval mode (use '--impure' to override)`~~ (fixed, `--impure` not needed anymore! Big thanks to [physics-enthusiast](https://github.com/physics-enthusiast)'s [contributions](https://github.com/Yeshey/nixos-nvidia-vgpu/pull/2))
 - ~~Needs `--impure` to run.~~
   - ~~`error: cannot call 'getFlake' on unlocked flake reference 'github:itstarsun/frida-nix'`, because of the line:~~
   - ~~`frida = (builtins.getFlake "github:itstarsun/frida-nix").packages.x86_64-linux.frida-tools;`~~ (fixed, [thanks](https://discourse.nixos.org/t/for-nixos-on-aws-ec2-how-to-get-ip-address/15616/12?u=yeshey)!)
 - ~~Hard coded nix store paths: https://discourse.nixos.org/t/how-to-use-python-environment-in-a-systemd-service/28022~~ (fixed!)
+
+## Acknowledgements
+
+I'm not an experienced nix developer and a lot of what's implemented here could be done in a better way. If anyone is interested in contributing, you may get in contact through the issues or simply make a pull request with details as to what it changes.
 
 This was heavily based and inspiered in these two repositories:
 
