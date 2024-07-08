@@ -108,34 +108,6 @@ let
         #   LD_PRELOAD = "LD_PRELOAD:${pkgs.glib.out}/lib";
         # };
   };
-
-  vgpu_unlock = nixos2311Pkgs.python310Packages.buildPythonPackage {
-    pname = "nvidia-vgpu-unlock";
-    version = "unstable-2021-04-22";
-
-    src = nixos2311Pkgs.fetchFromGitHub {
-      owner = "Yeshey";
-      repo = "vgpu_unlock";
-      rev = "7db331d4a2289ff6c1fb4da50cf445d9b4227421";
-      sha256 = "sha256-K7e/9q7DmXrrIFu4gsTv667bEOxRn6nTJYozP1+RGHs=";
-    };
-
-    # env = {
-    #   LD_LIBRARY_PATH = "LD_LIBRARY_PATH:${pkgs.glib.out}/lib";
-    #   LD_PRELOAD = "LD_PRELOAD:${pkgs.glib.out}/lib";
-    # };
-
-    propagatedBuildInputs = [ nixos2311Pkgs.python310Packages.frida-python ];
-    
-    doCheck = false; # Disable running checks during the build
-    
-    installPhase = ''
-      mkdir -p $out/bin
-      cp vgpu_unlock $out/bin/
-      substituteInPlace $out/bin/vgpu_unlock \
-              --replace /bin/bash ${nixos2311Pkgs.bash}/bin/bash
-    '';
-  };
 in
 {
   options = with lib; {
@@ -330,7 +302,7 @@ in
 
       serviceConfig = {
         Type = "forking";
-        ExecStart = "${vgpu_unlock}/bin/vgpu_unlock ${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpud";
+        ExecStart = "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpud";
         ExecStopPost = "${flakePkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpud";
         Environment = [ "__RM_NO_VERSION_CHECK=1" ]; # Avoids issue with API version incompatibility when merging host/client drivers
       };
@@ -344,9 +316,13 @@ in
       serviceConfig = {
         Type = "forking";
         KillMode = "process";
-        ExecStart = "${vgpu_unlock}/bin/vgpu_unlock ${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpu-mgr";
+        ExecStart = "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpu-mgr";
         ExecStopPost = "${flakePkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpu-mgr";
-        Environment = [ "__RM_NO_VERSION_CHECK=1" "LD_LIBRARY_PATH=LD_LIBRARY_PATH:${pkgs.glib.out}/lib" "LD_PRELOAD=LD_PRELOAD:${pkgs.glib.out}/lib" "LD_PRELOAD=${pkgs.glib.out}/lib" ];
+        environment = [
+          "__RM_NO_VERSION_CHECK=1"
+          "LD_LIBRARY_PATH=${pkgs.glib.out}/lib:$LD_LIBRARY_PATH"
+          "LD_PRELOAD=${pkgs.glib.out}/lib/libglib-2.0.so"
+        ];
       };
     };
     
