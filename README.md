@@ -193,6 +193,11 @@ I've tested creating an mdev on my own `NVIDIA GeForce RTX 2060 Mobile` by runni
 > sudo su
 > uuidgen
 ce851576-7e81-46f1-96e1-718da691e53e
+> lspci -D -nn | grep -i nvidia # to find the right address
+0000:01:00.0 VGA compatible controller [0300]: NVIDIA Corporation TU106M [GeForce RTX 2060 Mobile] [10de:1f11] (rev a1)
+0000:01:00.1 Audio device [0403]: NVIDIA Corporation TU106 High Definition Audio Controller [10de:10f9] (rev a1)
+0000:01:00.2 USB controller [0c03]: NVIDIA Corporation TU106 USB 3.1 Host Controller [10de:1ada] (rev a1)
+0000:01:00.3 Serial bus controller [0c80]: NVIDIA Corporation TU106 USB Type-C UCSI Controller [10de:1adb] (rev a1)
 > mdevctl start -u ce851576-7e81-46f1-96e1-718da691e53e -p 0000:01:00.0 --type nvidia-258 && mdevctl start -u b761f485-1eac-44bc-8ae6-2a3569881a1a -p 0000:01:00.0 --type nvidia-258 && mdevctl define --auto --uuid ce851576-7e81-46f1-96e1-718da691e53e && mdevctl define --auto --uuid b761f485-1eac-44bc-8ae6-2a3569881a1a
 ```
 That creates two vgpus in my graphics card (because my card has 6Gb and it needs to devide evenly, so 3Gb each Vgpu)
@@ -232,7 +237,7 @@ For more help [Join VGPU-Unlock discord for Support](https://discord.com/invite/
 ## Issues
 
 Biggest problems of the module:
-- Some games stop working on host (Vulkan?), also possible core dump from nvidia-vgpud happening bc of frida? [Issue on GPU Unlocking discord](https://discord.com/channels/829786927829745685/1192188752915869767)
+- Some games stop working on host (DXVK?), also possible core dump from nvidia-vgpud happening bc of frida? [Issue on GPU Unlocking discord](https://discord.com/channels/829786927829745685/1192188752915869767)
 - ~~Grabs merged driver from my google drive instead of compiling it~~(fixed by [letmeiiiin](https://github.com/letmeiiiin)'s [work](https://github.com/letmeiiiin/nixos-nvidia-vgpu)! Big thanks!)
 - ~~Commands need to be ran manually for the docker volume to work: Still needs `--impure`: `access to absolute path '/opt/docker' is forbidden in pure eval mode (use '--impure' to override)`~~ (fixed, `--impure` not needed anymore! Big thanks to [physics-enthusiast](https://github.com/physics-enthusiast)'s [contributions](https://github.com/Yeshey/nixos-nvidia-vgpu/pull/2))
 - ~~Needs `--impure` to run.~~
