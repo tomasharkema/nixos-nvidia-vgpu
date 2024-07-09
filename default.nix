@@ -219,6 +219,12 @@ in
   };
 
   config = lib.mkMerge [ ( lib.mkIf cfg.enable {
+
+    # Ensure the required firmware is available (if needed for your GPU)
+    hardware.enableAllFirmware = true;
+
+    # Enable virtualisation (if not already enabled)
+    virtualisation.libvirtd.enable = true;
   
     hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable.overrideAttrs ( # CHANGE stable to legacy_470 to pin the version of the driver if it stops working
       { patches ? [], postUnpack ? "", postPatch ? "", preFixup ? "", ... }@attrs: {
@@ -326,14 +332,24 @@ in
       };
     };
     
+    # Add extra modprobe configurations
     boot.extraModprobeConfig = 
       ''
-      options nvidia vup_sunlock=1 vup_swrlwar=1 vup_qmode=1
+      options nvidia vup_sunlock=1 vup_swrlwar=1 vup_qmode=1 
+      options vfio-pci ids=10de:1f11,10de:10f9,8086:1901,10de:1ada
       ''; # (for driver 535) bypasses `error: vmiop_log: NVOS status 0x1` in nvidia-vgpu-mgr.service when starting VM
 
     environment.etc."nvidia-vgpu-xxxxx/vgpuConfig.xml".source = config.hardware.nvidia.package + /vgpuConfig.xml;
 
-    boot.kernelModules = [ "nvidia-vgpu-vfio" ];
+    boot.kernelModules = [ 
+      "nvidia-vgpu-vfio" 
+      "vfio"
+      "vfio_pci"
+      "vfio_mdev"
+      "kvm"
+      "vfio_virqfd"
+      "vfio_iommu_type1"
+    ];
 
     environment.systemPackages = [ mdevctl];
     services.udev.packages = [ mdevctl ];
