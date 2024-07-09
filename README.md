@@ -220,7 +220,7 @@ ce851576-7e81-46f1-96e1-718da691e53e
 
 > mdevctl start -u ce851576-7e81-46f1-96e1-718da691e53e -p 0000:01:00.0 --type nvidia-258 && mdevctl start -u b761f485-1eac-44bc-8ae6-2a3569881a1a -p 0000:01:00.0 --type nvidia-258 && mdevctl define --auto --uuid ce851576-7e81-46f1-96e1-718da691e53e && mdevctl define --auto --uuid b761f485-1eac-44bc-8ae6-2a3569881a1a
 ```
-That creates two vgpus in my graphics card (because my card has 6Gb and it needs to devide evenly, so 3Gb each Vgpu)
+That creates two VGPUs in my graphics card (because my card has 6Gb so 3Gb each VGPU. It needs to devide evenly, so I could also do 3 VGPUs of 2Gb each for example, but it's not possible to have 1 VGPU of 4Gb and one of 2Gb)
 
 check if they were created successfully with `mdevctl list`
 ```bash
@@ -229,7 +229,7 @@ ce851576-7e81-46f1-96e1-718da691e53e 0000:01:00.0 nvidia-258 (defined)
 b761f485-1eac-44bc-8ae6-2a3569881a1a 0000:01:00.0 nvidia-258 (defined)
 ```
 
-Also you can change the resolution and other parameters of a profile directly in the vgpu config xml, so you can mod for example a A profile as you need, just need to reboot to get the changes loaded (or reload all the stuff)
+(UNTESTED!) Also you can change the resolution and other parameters of a profile directly in the vgpu config xml here: `/etc/nvidia-vgpu-xxxxx/vgpuConfig.xml`, so you can mod for example a A profile as you need, just need to reboot to get the changes loaded (or reload all the stuff).
 
 ## Compile your drivers
 
