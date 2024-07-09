@@ -255,7 +255,8 @@ If you want to make sure your looking glass version won't get updated, you can p
   environment.systemPackages = with pkgs; let
     # Looking glass B6 version in nixpkgs: 
     myLookingGlassPkgs = import (builtins.fetchTarball {
-        url = "https://github.com/NixOS/nixpkgs/archive/c0d0be00d4ecc4b51d2d6948e37466194c1e6c51.tar.gz";
+          url = "https://github.com/NixOS/nixpkgs/archive/c0d0be00d4ecc4b51d2d6948e37466194c1e6c51.tar.gz";
+          sha256 = "sha256:1yrqrpmrdzbzcwb7kv9m6gbzjk68ljs098fv246brq6mc3s4v5qk";
     }) {};
     looking-glass-client-B7-rc1 = myLookingGlassPkgs.looking-glass-client;
   in [
