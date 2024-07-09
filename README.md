@@ -65,8 +65,11 @@ This module unlocks vGPU functionality on your consumer nvidia card.
     };
   };
 ```
-- This will attempt to compile and install the driver `535.129.03`, you will be prompted to add it with `nix-store --add-fixed...`, you'll need to get the file [from nvidia](https://www.nvidia.com/object/vGPU-software-driver.html), you have to sign up and request and it might take some days. Refer to the [Discord VGPU-Unlock Community](https://discord.com/invite/5rQsSV3Byq) for support.  
-If you're still getting the `Unfortunately, we cannot download file...` error, use the option `vgpu_driver_src.sha256` to override the hardcoded hash. Find the hash of the file with `nix hash file file.zip`.
+- This will attempt to compile and install the merged driver `535.129.03`, it merges the the common nvidia linux driver (like `NVIDIA-Linux-x86_64-535.129.03.run`) and a GRID driver that is usually for a server to share its GPU with multiple users (like `NVIDIA-GRID-Linux-KVM-535.129.03-537.70.run`), so the host can use and share the GPU simultaneously. We can't provide the latter, so you will be prompted with `nix-store --add-fixed...` to add it;  
+  
+  You'll need to get it [from nvidia](https://www.nvidia.com/object/vGPU-software-driver.html), you have to sign up and make a request that might take some days or refer to the [Discord VGPU-Unlock Community](https://discord.com/invite/5rQsSV3Byq) for support;  
+
+  If you're still getting the `Unfortunately, we cannot download file...` error, use the option `vgpu_driver_src.sha256` to override the hardcoded hash. Find the hash of the file with `nix hash file file.zip`.
 - You will have to check your kernel, kernel `6.1.` is recommended, higher than that won't work. Check the [Tested In](#tested-in) section to see the tested kernels.
 - If you have a compiled merge driver, you can directly use it with the `useMyDriver` option. Here is an example using the driver in my google drive:
   ```nix
