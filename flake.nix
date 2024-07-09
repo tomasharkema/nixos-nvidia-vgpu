@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs = {
-      url = "https://github.com/NixOS/nixpkgs/archive/c0d0be00d4ecc4b51d2d6948e37466194c1e6c51.tar.gz"; # a working revision (09/07/2024)
+      url = "https://github.com/NixOS/nixpkgs/archive/9f4128e00b0ae8ec65918efeba59db998750ead6.tar.gz"; # a working revision (09/07/2024)
     };
   };
 
