@@ -20,7 +20,7 @@ This module unlocks vGPU functionality on your consumer nvidia card.
 
    ```
 
-   2. in a Flake configuration: (you can also check it in [my nixos config](https://github.com/Yeshey/nixOS-Config/tree/HEAD@{2024-04-27})). For an introduction to flakes, see [here](https://nixos.wiki/wiki/Flakes).
+   2. In a Flake configuration you'll have to add the following. You may refer to [my nixos config](https://github.com/Yeshey/nixOS-Config/tree/HEAD@{2024-04-27}) for a working example or to [here](https://nixos.wiki/wiki/Flakes) for an introduction to flakes.
    ```nix
    # flake.nix
    {
