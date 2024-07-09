@@ -161,12 +161,18 @@ You can refer to `./guides` for specific goals:
 
 In the Windows VM you need to install the appropriate drivers too, if you use an A profile([difference between profiles](https://youtu.be/cPrOoeMxzu0?t=1244)) for example (from the `mdevctl types` command) you can use the normal driver from the [nvidia licensing server](#nvidia-drivers), if you want a Q profile, you're gonna need to get the driver from the [nvidia servers](#nvidia-drivers) and patch it with the [community vgpu unlock repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher).
 
-That [didn't work for me either](https://discord.com/channels/829786927829745685/830520513834516530/1109199157299793970) tho, so I had to use the special `GeForce RTX 2070-` profiles (from `mdevctl types`) and a special driver for the VM, [this one](https://nvidia-gaming.s3.us-east-1.amazonaws.com/windows/528.49_Cloud_Gaming_win10_win11_server2019_server2022_dch_64bit_international.exe).  
+That [didn't work for me](https://discord.com/channels/829786927829745685/830520513834516530/1109199157299793970) tho.
+
+Besides the above profiles there are vGaming profiles, the ones I recommend, I used the special `GeForce RTX 2070-` profiles (from `mdevctl types`).  
+If using this profile, you should be able to install the normal corresponding nvidia driver for the windows guest, it will support vulkan, opengl, directx and such for games but not CUDA.  
+If you're having trouble with the licensing (altho fastapi-dls should be able to deal with it), you might have to install a specific driver like [this one](https://nvidia-gaming.s3.us-east-1.amazonaws.com/windows/528.49_Cloud_Gaming_win10_win11_server2019_server2022_dch_64bit_international.exe).   
 Here is the explenation of where that driver is from:
 > vGaming is specially licensed.  
 > there's no trial and you need to buy a compute cluster from nuhvidya.  
 > But Amazon has this and they host the drivers for people to use.  
 > The link comes from their bucket that has the vGaming drivers
+
+Ask in the [VGPU-Unlock discord](https://discord.com/invite/5rQsSV3Byq) for the correct version if this is the case.
 
 ### nvidia-drivers
 
@@ -175,6 +181,7 @@ For guest drivers for windows get the ones with the name `Microsoft Hyper-V Serv
 To check and match versions see [here](https://docs.nvidia.com/grid/index.html). For example:
 | vGPU Software | Linux vGPU Manager | Windows vGPU Manager | Linux Driver | Windows Driver | Release Date |
 |--------------|-------------------|---------------------|--------------|----------------|--------------|
+| 16.2         | 535.129.03        | 537.70              | 535.129.03   |	537.70         | October 2023 |
 | 15.2         | 525.105.14        | 528.89              | 525.105.17   | 528.89         | March 2023   |
 | 15.1         | 525.85.07         | 528.24              | 525.85.05    | 528.24         | January 2023 |
 | 15.0         | 525.60.12         | 527.41              | 525.60.13    | 527.41         | December 2022|
@@ -182,7 +189,7 @@ To check and match versions see [here](https://docs.nvidia.com/grid/index.html).
 ## Additional Notes
 
 To test if everything is installed correctly run `nvidia-smi vgpu`. If there is no output something went wrong with the installation.  
-Also test `mdevctl types`, if there is no output, maybe your graphics card isn't supported yet. (TODO: add setting to modify the [vcfgclone lines](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher#usage))
+Also test `mdevctl types`, if there is no output, maybe your graphics card isn't supported yet or you have an incompatible kernel. (TODO: add setting to modify the [vcfgclone lines](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher#usage))
 
 You can also check if the services `nvidia-vgpu-mgr` and `nvidia-vgpud` executed without errors with `systemctl status nvidia-vgpud` and `systemctl status nvidia-vgpu-mgr`. (or something like `journalctl -fu nvidia-vgpud` to see the logs in real time)
 
@@ -191,13 +198,16 @@ If you set up fastapi-dls correctly, you should get a notification when your win
 I've tested creating an mdev on my own `NVIDIA GeForce RTX 2060 Mobile` by running:
 ```bash
 > sudo su
+
 > uuidgen
 ce851576-7e81-46f1-96e1-718da691e53e
+
 > lspci -D -nn | grep -i nvidia # to find the right address
 0000:01:00.0 VGA compatible controller [0300]: NVIDIA Corporation TU106M [GeForce RTX 2060 Mobile] [10de:1f11] (rev a1)
 0000:01:00.1 Audio device [0403]: NVIDIA Corporation TU106 High Definition Audio Controller [10de:10f9] (rev a1)
 0000:01:00.2 USB controller [0c03]: NVIDIA Corporation TU106 USB 3.1 Host Controller [10de:1ada] (rev a1)
 0000:01:00.3 Serial bus controller [0c80]: NVIDIA Corporation TU106 USB Type-C UCSI Controller [10de:1adb] (rev a1)
+
 > mdevctl start -u ce851576-7e81-46f1-96e1-718da691e53e -p 0000:01:00.0 --type nvidia-258 && mdevctl start -u b761f485-1eac-44bc-8ae6-2a3569881a1a -p 0000:01:00.0 --type nvidia-258 && mdevctl define --auto --uuid ce851576-7e81-46f1-96e1-718da691e53e && mdevctl define --auto --uuid b761f485-1eac-44bc-8ae6-2a3569881a1a
 ```
 That creates two vgpus in my graphics card (because my card has 6Gb and it needs to devide evenly, so 3Gb each Vgpu)
@@ -214,14 +224,13 @@ Also you can change the resolution and other parameters of a profile directly in
 ## Compile your drivers
 
 Use `nix-shell` to get the tools to run the [vGPU community repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher), you'll have to clone the branch for the driver you want with submodules, for example: `git clone --recurse-submodules -b 525.105 https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher.git`.  
-Missing `mscompress` to compile the windows guest driver for now tho.
+Missing `mscompress` to compile the windows guest driver to have CUDA working on windows guests for now tho.
 
 ### Linux Host Merged Driver
 
 In the case of the merged driver you'll have to get the vgpu driver and the normal driver and merge them with the vGPU repo.
 
 1. Refer to the [vGPU community repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher). If your graphics card isn't supported you'll likely have to add a `vcfgclone` in patch.sh of their repository as per their instructions.
-   1. I compiled it in another OS(manjaro in my case).
 2. Use the option `useMyDriver` like shown in [installation](#installation) section.
 4. Refer to the [VGPU-Unlock discord community](https://discord.com/invite/5rQsSV3Byq) for help :)
 
@@ -234,10 +243,11 @@ In the case of the merged driver you'll have to get the vgpu driver and the norm
 
 For more help [Join VGPU-Unlock discord for Support](https://discord.com/invite/5rQsSV3Byq)
 
-## Issues
+## Known Issues
 
 Biggest problems of the module:
-- Some games stop working on host (DXVK?), also possible core dump from nvidia-vgpud happening bc of frida? [Issue on GPU Unlocking discord](https://discord.com/channels/829786927829745685/1192188752915869767)
+- Some games stop working on host (DXVK?), [Issue on GPU Unlocking discord](https://discord.com/channels/829786927829745685/1192188752915869767)
+- ~~Core dump from nvidia-vgpud happening bc of frida?~~(fixed, frida is not even needed anymore, it was for the old vgpu repo)
 - ~~Grabs merged driver from my google drive instead of compiling it~~(fixed by [letmeiiiin](https://github.com/letmeiiiin)'s [work](https://github.com/letmeiiiin/nixos-nvidia-vgpu)! Big thanks!)
 - ~~Commands need to be ran manually for the docker volume to work: Still needs `--impure`: `access to absolute path '/opt/docker' is forbidden in pure eval mode (use '--impure' to override)`~~ (fixed, `--impure` not needed anymore! Big thanks to [physics-enthusiast](https://github.com/physics-enthusiast)'s [contributions](https://github.com/Yeshey/nixos-nvidia-vgpu/pull/2))
 - ~~Needs `--impure` to run.~~
