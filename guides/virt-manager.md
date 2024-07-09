@@ -249,6 +249,20 @@ Run it with something like `looking-glass-client win:fullScreen spice:alwaysShow
   ];
 ```
 
+If you want to make sure your looking glass version won't get updated, you can pin it, this also means that you will have another version of nixpkgs on the system:
+
+```nix
+  environment.systemPackages = with pkgs; let
+    # Looking glass B6 version in nixpkgs: 
+    myLookingGlassPkgs = import (builtins.fetchTarball {
+        url = "https://github.com/NixOS/nixpkgs/archive/c0d0be00d4ecc4b51d2d6948e37466194c1e6c51.tar.gz";
+    }) {};
+    looking-glass-client-B7-rc1 = myLookingGlassPkgs.looking-glass-client;
+  in [
+    looking-glass-client-B7-rc1
+  ];
+```
+
 #### Debug
 
 If it gives a permission error like this:
