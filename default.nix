@@ -9,7 +9,7 @@ let
   grid-driver-version = "535.129.03";
   wdys-driver-version = "537.70";
   grid-version = "16.2";
-  kernel-at-least-6 = if lib.strings.versionAtLeast config.boot.kernelPackages.kernel.version "6.0" then "true" else "false";
+  kernel-at-least-6 = lib.strings.versionAtLeast config.boot.kernelPackages.kernel.version "6.0";
 in
 let
 /*
@@ -63,14 +63,13 @@ let
   } // args);
 
   compiled-driver = nixos2311Pkgs.stdenv.mkDerivation {
-    name = "driver-compile";
+    name = "driver-compile-NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched";
       nativeBuildInputs = [ nixos2311Pkgs.p7zip nixos2311Pkgs.unzip nixos2311Pkgs.coreutils nixos2311Pkgs.bash nixos2311Pkgs.zstd];
         system = "x86_64-linux";
         src = nixos2311Pkgs.fetchFromGitHub {
           owner = "VGPU-Community-Drivers";
           repo = "vGPU-Unlock-patcher";
           # 535.129
-          #rev = "535.129";
           rev = "3765eee908858d069e7b31842f3486095b0846b5";
           hash = "sha256-PR61ylYgTaWQ/xxMDR8ZUUA5vQNUcZvIt/hqgpAQeNM=";
           fetchSubmodules = true;
@@ -85,10 +84,6 @@ let
             name = "NVIDIA-GRID-Linux-KVM-${driver-version}-${wdys-driver-version}.zip";
             sha256 = cfg.vgpu_driver_src.sha256; # nix hash file foo.txt
           };
-        #vgpu_driver_src = nixos2311Pkgs.fetchurl {
-        #  url = "https://sitewithdriver.com/releases/download/${grid-version}/NVIDIA-GRID-Linux-KVM-${driver-version}-${wdys-driver-version}.zip";
-        #  sha256 = "b458037fb652219464bc898efbd62096b2e298624c67f7f3db9823513d137c3a";
-        #};
  
         buildPhase = ''
           mkdir -p $out
@@ -100,13 +95,9 @@ let
           cp -a $src/* .
           cp -a $original_driver_src NVIDIA-Linux-x86_64-${driver-version}.run
           
-          bash ./patch.sh --force-nvidia-gpl-I-know-it-is-wrong --enable-nvidia-gpl-for-experimenting --repack general-merge 
+          bash ./patch.sh ${lib.optionalString kernel-at-least-6 "--force-nvidia-gpl-I-know-it-is-wrong --enable-nvidia-gpl-for-experimenting"} --repack general-merge
           cp -a NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched.run $out
         '';
-        # env = {
-        #   LD_LIBRARY_PATH = "LD_LIBRARY_PATH:${pkgs.glib.out}/lib";
-        #   LD_PRELOAD = "LD_PRELOAD:${pkgs.glib.out}/lib";
-        # };
   };
 in
 {
@@ -220,14 +211,13 @@ in
 
   config = lib.mkMerge [ ( lib.mkIf cfg.enable {
   
-    hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable.overrideAttrs ( # CHANGE stable to legacy_470 to pin the version of the driver if it stops working
+    hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable.overrideAttrs (
       { patches ? [], postUnpack ? "", postPatch ? "", preFixup ? "", ... }@attrs: {
       # Overriding https://github.com/NixOS/nixpkgs/tree/nixos-unstable/pkgs/os-specific/linux/nvidia-x11
       # that gets called from the option hardware.nvidia.package from here: https://github.com/NixOS/nixpkgs/blob/nixos-22.11/nixos/modules/hardware/video/nvidia.nix
       name = "NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched-${config.boot.kernelPackages.kernel.version}";
       version = "${driver-version}";
 
-      # the new driver (getting from my Google drive)
       # the new driver (compiled in a derivation above)
       src = if (!cfg.useMyDriver.enable) then
         "${compiled-driver}/NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched.run"
@@ -245,11 +235,6 @@ in
               #
               sha256 = cfg.useMyDriver.sha256;
             };
-      # src = pkgs.fetchurl {
-      #         name = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
-      #         url = "https://drive.usercontent.google.com/download?id=17NN0zZcoj-uY2BELxY2YqGvf6KtZNXhG&export=download&authuser=0&confirm=t&uuid=b70e0e36-34df-4fde-a86b-4d41d21ce483&at=APZUnTUfGnSmFiqhIsCNKQjPLEk3%3A1714043345939";
-      #         sha256 = "sha256-g8BM1g/tYv3G9vTKs581tfSpjB6ynX2+FaIOyFcDfdI=";
-      #       };
 
       postPatch = if postPatch != null then postPatch + ''
         # Move path for vgpuConfig.xml into /etc
@@ -304,7 +289,7 @@ in
         Type = "forking";
         ExecStart = "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpud";
         ExecStopPost = "${flakePkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpud";
-        Environment = [ "__RM_NO_VERSION_CHECK=1" ]; # Avoids issue with API version incompatibility when merging host/client drivers
+        Environment = [ "__RM_NO_VERSION_CHECK=1" ]; # I think it's not needed anymore? (Avoids issue with API version incompatibility when merging host/client drivers)
       };
     };
 
@@ -335,7 +320,7 @@ in
 
     boot.kernelModules = [ "nvidia-vgpu-vfio" ];
 
-    environment.systemPackages = [ mdevctl];
+    environment.systemPackages = [ mdevctl ];
     services.udev.packages = [ mdevctl ];
 
   })
