@@ -347,8 +347,8 @@ in
           image = "collinwebdesigns/fastapi-dls";
           imageFile = flakePkgs.dockerTools.pullImage {
             imageName = "collinwebdesigns/fastapi-dls";
-            imageDigest = "sha256:6fa90ce552c4e9ecff9502604a4fd42b3e67f52215eb6d8de03a5c3d20cd03d1";
-            sha256 = "1y642miaqaxxz3z8zkknk0xlvzxcbi7q7ylilnxhxfcfr7x7kfqa";
+            imageDigest = "sha256:b7b5781a19058b7a825e8a4bb6982e09d0e390ee6c74f199ff9938d74934576c";
+            sha256 = "sha256-1qvsVMzM4/atnQmxDMIamIVHCEYpxh0WDLLbANS2Wzw=";
           };
           volumes = [
             "${cfg.fastapi-dls.docker-directory}/fastapi-dls/cert:/app/cert:rw"
@@ -385,53 +385,71 @@ in
       systemd.services.fastapi-dls-mgr = {
         path = [ flakePkgs.openssl ];
         script = ''
-        WORKING_DIR=${cfg.fastapi-dls.docker-directory}/fastapi-dls/cert
-        CERT_CHANGED=false
-        recreate_private () {
-          rm -f $WORKING_DIR/instance.private.pem
-          openssl genrsa -out $WORKING_DIR/instance.private.pem 2048
-        }
-        recreate_public () {
-          rm -f $WORKING_DIR/instance.public.pem
-          openssl rsa -in $WORKING_DIR/instance.private.pem -outform PEM -pubout -out $WORKING_DIR/instance.public.pem
-        }
-        recreate_certs () {
-          rm -f $WORKING_DIR/webserver.key
-          rm -f $WORKING_DIR/webserver.crt 
-          openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout $WORKING_DIR/webserver.key -out $WORKING_DIR/webserver.crt -subj "/C=XX/ST=StateName/L=CityName/O=CompanyName/OU=CompanySectionName/CN=CommonNameOrHostname"
-        }
-        check_recreate() {
-          if [ ! -e $WORKING_DIR/instance.private.pem ]; then
-            recreate_private
-            recreate_public
-            recreate_certs
-            CERT_CHANGED=true
-          fi
-          if [ ! -e $WORKING_DIR/instance.public.pem ]; then
-            recreate_public
-            recreate_certs
-            CERT_CHANGED=true
-          fi 
-          if [ ! -e $WORKING_DIR/webserver.key ] || [ ! -e $WORKING_DIR/webserver.crt ]; then
-            recreate_certs
-            CERT_CHANGED=true
-          fi
-          if ( ! openssl x509 -checkend 864000 -noout -in $WORKING_DIR/webserver.crt); then
-            recreate_certs
-            CERT_CHANGED=true
-          fi
-        }
-        if [ ! -d $WORKING_DIR ]; then
-          mkdir -p $WORKING_DIR
-        fi
-        check_recreate
-        if ( ! systemctl is-active --quiet docker-fastapi-dls.service ); then
-          systemctl start podman-fastapi-dls.service
-        elif $CERT_CHANGED; then
-          systemctl stop podman-fastapi-dls.service
-          systemctl start podman-fastapi-dls.service
-        fi
-        '';
+  WORKING_DIR=${cfg.fastapi-dls.docker-directory}/fastapi-dls/cert
+  CERT_CHANGED=false
+
+  recreate_private () {
+    echo "Recreating private key..."
+    rm -f $WORKING_DIR/instance.private.pem
+    openssl genrsa -out $WORKING_DIR/instance.private.pem 2048
+  }
+
+  recreate_public () {
+    echo "Recreating public key..."
+    rm -f $WORKING_DIR/instance.public.pem
+    openssl rsa -in $WORKING_DIR/instance.private.pem -outform PEM -pubout -out $WORKING_DIR/instance.public.pem
+  }
+
+  recreate_certs () {
+    echo "Recreating certificates..."
+    rm -f $WORKING_DIR/webserver.key
+    rm -f $WORKING_DIR/webserver.crt
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout $WORKING_DIR/webserver.key -out $WORKING_DIR/webserver.crt -subj "/C=XX/ST=StateName/L=CityName/O=CompanyName/OU=CompanySectionName/CN=CommonNameOrHostname"
+  }
+
+  check_recreate() {
+    echo "Checking if certificates need to be recreated..."
+    if [ ! -e $WORKING_DIR/instance.private.pem ]; then
+      echo "Private key missing, recreating..."
+      recreate_private
+      recreate_public
+      recreate_certs
+      CERT_CHANGED=true
+    fi
+    if [ ! -e $WORKING_DIR/instance.public.pem ]; then
+      echo "Public key missing, recreating..."
+      recreate_public
+      recreate_certs
+      CERT_CHANGED=true
+    fi
+    if [ ! -e $WORKING_DIR/webserver.key ] || [ ! -e $WORKING_DIR/webserver.crt ]; then
+      echo "Webserver certificates missing, recreating..."
+      recreate_certs
+      CERT_CHANGED=true
+    fi
+    if ( ! openssl x509 -checkend 864000 -noout -in $WORKING_DIR/webserver.crt); then
+      echo "Webserver certificate will expire soon, recreating..."
+      recreate_certs
+      CERT_CHANGED=true
+    fi
+  }
+
+  echo "Ensuring working directory exists..."
+  if [ ! -d $WORKING_DIR ]; then
+    mkdir -p $WORKING_DIR
+  fi
+
+  check_recreate
+
+  if ( ! systemctl is-active --quiet podman-fastapi-dls.service); then
+    echo "Starting podman-fastapi-dls.service..."
+    systemctl start podman-fastapi-dls.service
+  elif $CERT_CHANGED; then
+    echo "Restarting podman-fastapi-dls.service due to certificate change..."
+    systemctl stop podman-fastapi-dls.service
+    systemctl start podman-fastapi-dls.service
+  fi
+  '';
         serviceConfig = {
           Type = "oneshot";
           User = "root";
