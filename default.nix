@@ -77,6 +77,16 @@ in
     hardware.nvidia.vgpu = {
       enable = mkEnableOption "vGPU support";
 
+      pinKernel = mkOption {
+        default = false;
+        type = types.bool;
+        description = ''
+          This will set kernel 6.1, a long term support release(LTS), higher kernels won't work with this module.
+          If the inputs of this module aren't set to follow the rest of nixpkgs in the inputs (inputs.nixpkgs.follows = "nixpkgs";), then this means your kernel will also be pinned to the nixpkgs revision of this module known to work, and you won't recieve the security updates from the LTS (until 31 Dec 2026).
+          Not recommended unless you are experiencing problems.
+        '';
+      };
+
       vgpu_driver_src.sha256 = mkOption {
         default = "sha256-tFgDf7ZSIZRkvImO+9YglrLimGJMZ/fz25gjUT0TfDo=";
         type = types.str;
@@ -181,123 +191,129 @@ in
     };
   };
 
-  config = lib.mkMerge [ ( lib.mkIf cfg.enable {
-  
-    hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable.overrideAttrs (
-      { patches ? [], postUnpack ? "", postPatch ? "", preFixup ? "", ... }@attrs: {
-      # Overriding https://github.com/NixOS/nixpkgs/tree/nixos-unstable/pkgs/os-specific/linux/nvidia-x11
-      # that gets called from the option hardware.nvidia.package from here: https://github.com/NixOS/nixpkgs/blob/nixos-22.11/nixos/modules/hardware/video/nvidia.nix
-      name = "NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched-${config.boot.kernelPackages.kernel.version}";
-      version = "${driver-version}";
+  config = lib.mkMerge [ ( lib.mkIf (cfg.enable && cfg.pinKernel) {
 
-      # the new driver (compiled in a derivation above)
-      src = if (!cfg.useMyDriver.enable) then
-        "${compiled-driver}/NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched.run"
-        else
-          if (cfg.useMyDriver.getFromRemote != null) then
-            cfg.useMyDriver.getFromRemote
-          else
-            pkgs.requireFile {
-              name = cfg.useMyDriver.name;
-              url = "compile it with the repo https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher 😉, also if you got this error the hash might be wrong, use `nix hash file <file>`";
-              # The hash below was computed like so:
-              #
-              # $ nix hash file foo.txt
-              # sha256-9fhYGu9fqxcQC2Kc81qh2RMo1QcLBUBo8U+pPn+jthQ=
-              #
-              sha256 = cfg.useMyDriver.sha256;
-            };
+      boot.kernelPackages = pkgs.linuxPackages_6_1; # 6.1, LTS Kernel
 
-      postPatch = if postPatch != null then postPatch + ''
-        # Move path for vgpuConfig.xml into /etc
-        sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
-
-        substituteInPlace sriov-manage \
-          --replace lspci ${pkgs.pciutils}/bin/lspci \
-          --replace setpci ${pkgs.pciutils}/bin/setpci
-      '' else ''
-        # Move path for vgpuConfig.xml into /etc
-        sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
-
-        substituteInPlace sriov-manage \
-          --replace lspci ${pkgs.pciutils}/bin/lspci \
-          --replace setpci ${pkgs.pciutils}/bin/setpci
-      '';
-
-      /*
-      postPatch = postPatch + ''
-        # Move path for vgpuConfig.xml into /etc
-        sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
-
-        substituteInPlace sriov-manage \
-          --replace lspci ${pkgs.pciutils}/bin/lspci \
-          --replace setpci ${pkgs.pciutils}/bin/setpci
-      ''; */
-
-      # HACK: Using preFixup instead of postInstall since nvidia-x11 builder.sh doesn't support hooks
-      preFixup = preFixup + ''
-        for i in libnvidia-vgpu.so.${vgpu-driver-version} libnvidia-vgxcfg.so.${vgpu-driver-version}; do
-          install -Dm755 "$i" "$out/lib/$i"
-        done
-        patchelf --set-rpath ${pkgs.stdenv.cc.cc.lib}/lib $out/lib/libnvidia-vgpu.so.${vgpu-driver-version}
-        install -Dm644 vgpuConfig.xml $out/vgpuConfig.xml
-
-        for i in nvidia-vgpud nvidia-vgpu-mgr; do
-          install -Dm755 "$i" "$bin/bin/$i"
-          # stdenv.cc.cc.lib is for libstdc++.so needed by nvidia-vgpud
-          patchelf --interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" \
-            --set-rpath $out/lib "$bin/bin/$i"
-        done
-        install -Dm755 sriov-manage $bin/bin/sriov-manage
-      '';
-    });
-
-    systemd.services.nvidia-vgpud = {
-      description = "NVIDIA vGPU Daemon";
-      wants = [ "syslog.target" ];
-      wantedBy = [ "multi-user.target" ];
-
-      serviceConfig = {
-        Type = "forking";
-        ExecStart = "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpud";
-        ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpud";
-        Environment = [ "__RM_NO_VERSION_CHECK=1" ]; # I think it's not needed anymore? (Avoids issue with API version incompatibility when merging host/client drivers)
-      };
-    };
-
-    systemd.services.nvidia-vgpu-mgr = {
-      description = "NVIDIA vGPU Manager Daemon";
-      wants = [ "syslog.target" ];
-      wantedBy = [ "multi-user.target" ];
-
-      serviceConfig = {
-        Type = "forking";
-        KillMode = "process";
-        ExecStart = "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpu-mgr";
-        ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpu-mgr";
-        environment = [
-          "__RM_NO_VERSION_CHECK=1"
-          "LD_LIBRARY_PATH=${pkgs.glib.out}/lib:$LD_LIBRARY_PATH"
-          "LD_PRELOAD=${pkgs.glib.out}/lib/libglib-2.0.so"
-        ];
-      };
-    };
+    })
     
-    boot.extraModprobeConfig = 
-      ''
-      options nvidia vup_sunlock=1 vup_swrlwar=1 vup_qmode=1
-      ''; # (for driver 535) bypasses `error: vmiop_log: NVOS status 0x1` in nvidia-vgpu-mgr.service when starting VM
+    ( lib.mkIf cfg.enable {
+  
+      hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable.overrideAttrs (
+        { patches ? [], postUnpack ? "", postPatch ? "", preFixup ? "", ... }@attrs: {
+        # Overriding https://github.com/NixOS/nixpkgs/tree/nixos-unstable/pkgs/os-specific/linux/nvidia-x11
+        # that gets called from the option hardware.nvidia.package from here: https://github.com/NixOS/nixpkgs/blob/nixos-22.11/nixos/modules/hardware/video/nvidia.nix
+        name = "NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched-${config.boot.kernelPackages.kernel.version}";
+        version = "${driver-version}";
 
-    environment.etc."nvidia-vgpu-xxxxx/vgpuConfig.xml".source = config.hardware.nvidia.package + /vgpuConfig.xml;
+        # the new driver (compiled in a derivation above)
+        src = if (!cfg.useMyDriver.enable) then
+          "${compiled-driver}/NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched.run"
+          else
+            if (cfg.useMyDriver.getFromRemote != null) then
+              cfg.useMyDriver.getFromRemote
+            else
+              pkgs.requireFile {
+                name = cfg.useMyDriver.name;
+                url = "compile it with the repo https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher 😉, also if you got this error the hash might be wrong, use `nix hash file <file>`";
+                # The hash below was computed like so:
+                #
+                # $ nix hash file foo.txt
+                # sha256-9fhYGu9fqxcQC2Kc81qh2RMo1QcLBUBo8U+pPn+jthQ=
+                #
+                sha256 = cfg.useMyDriver.sha256;
+              };
 
-    boot.kernelModules = [ "nvidia-vgpu-vfio" ];
+        postPatch = if postPatch != null then postPatch + ''
+          # Move path for vgpuConfig.xml into /etc
+          sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
 
-    environment.systemPackages = [ mdevctl ];
-    services.udev.packages = [ mdevctl ];
+          substituteInPlace sriov-manage \
+            --replace lspci ${pkgs.pciutils}/bin/lspci \
+            --replace setpci ${pkgs.pciutils}/bin/setpci
+        '' else ''
+          # Move path for vgpuConfig.xml into /etc
+          sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
 
-  })
+          substituteInPlace sriov-manage \
+            --replace lspci ${pkgs.pciutils}/bin/lspci \
+            --replace setpci ${pkgs.pciutils}/bin/setpci
+        '';
 
-    (lib.mkIf cfg.fastapi-dls.enable {
+        /*
+        postPatch = postPatch + ''
+          # Move path for vgpuConfig.xml into /etc
+          sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
+
+          substituteInPlace sriov-manage \
+            --replace lspci ${pkgs.pciutils}/bin/lspci \
+            --replace setpci ${pkgs.pciutils}/bin/setpci
+        ''; */
+
+        # HACK: Using preFixup instead of postInstall since nvidia-x11 builder.sh doesn't support hooks
+        preFixup = preFixup + ''
+          for i in libnvidia-vgpu.so.${vgpu-driver-version} libnvidia-vgxcfg.so.${vgpu-driver-version}; do
+            install -Dm755 "$i" "$out/lib/$i"
+          done
+          patchelf --set-rpath ${pkgs.stdenv.cc.cc.lib}/lib $out/lib/libnvidia-vgpu.so.${vgpu-driver-version}
+          install -Dm644 vgpuConfig.xml $out/vgpuConfig.xml
+
+          for i in nvidia-vgpud nvidia-vgpu-mgr; do
+            install -Dm755 "$i" "$bin/bin/$i"
+            # stdenv.cc.cc.lib is for libstdc++.so needed by nvidia-vgpud
+            patchelf --interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" \
+              --set-rpath $out/lib "$bin/bin/$i"
+          done
+          install -Dm755 sriov-manage $bin/bin/sriov-manage
+        '';
+      });
+
+      systemd.services.nvidia-vgpud = {
+        description = "NVIDIA vGPU Daemon";
+        wants = [ "syslog.target" ];
+        wantedBy = [ "multi-user.target" ];
+
+        serviceConfig = {
+          Type = "forking";
+          ExecStart = "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpud";
+          ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpud";
+          Environment = [ "__RM_NO_VERSION_CHECK=1" ]; # I think it's not needed anymore? (Avoids issue with API version incompatibility when merging host/client drivers)
+        };
+      };
+
+      systemd.services.nvidia-vgpu-mgr = {
+        description = "NVIDIA vGPU Manager Daemon";
+        wants = [ "syslog.target" ];
+        wantedBy = [ "multi-user.target" ];
+
+        serviceConfig = {
+          Type = "forking";
+          KillMode = "process";
+          ExecStart = "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpu-mgr";
+          ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpu-mgr";
+          environment = [
+            "__RM_NO_VERSION_CHECK=1"
+            "LD_LIBRARY_PATH=${pkgs.glib.out}/lib:$LD_LIBRARY_PATH"
+            "LD_PRELOAD=${pkgs.glib.out}/lib/libglib-2.0.so"
+          ];
+        };
+      };
+      
+      boot.extraModprobeConfig = 
+        ''
+        options nvidia vup_sunlock=1 vup_swrlwar=1 vup_qmode=1
+        ''; # (for driver 535) bypasses `error: vmiop_log: NVOS status 0x1` in nvidia-vgpu-mgr.service when starting VM
+
+      environment.etc."nvidia-vgpu-xxxxx/vgpuConfig.xml".source = config.hardware.nvidia.package + /vgpuConfig.xml;
+
+      boot.kernelModules = [ "nvidia-vgpu-vfio" ];
+
+      environment.systemPackages = [ mdevctl ];
+      services.udev.packages = [ mdevctl ];
+
+    })
+
+    (lib.mkIf (cfg.enable && cfg.fastapi-dls.enable) {
     
       virtualisation.oci-containers.containers = {
         fastapi-dls = {

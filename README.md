@@ -25,11 +25,14 @@ This module unlocks vGPU functionality on your consumer nvidia card.
    # flake.nix
    {
      inputs = {
-       nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
+       nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
 
        nixos-nvidia-vgpu = {
          url = "github:Yeshey/nixos-nvidia-vgpu/535.129";
-         # inputs.nixpkgs.follows = "nixpkgs"; # doesn't work with latest nixpkgs rn
+
+         # comment this line and a specific older revision
+         # of nixpkgs known to work will be used
+         inputs.nixpkgs.follows = "nixpkgs";
        };
      };
 
@@ -48,9 +51,12 @@ This module unlocks vGPU functionality on your consumer nvidia card.
    ```
 2. Then add the module configuration to activate vgpu, example:
 ```nix
+  boot.kernelPackages = pkgs.linuxPackages_6_1; # needs kernel 6.1
+
   hardware.nvidia.vgpu = {
     enable = true; # Install NVIDIA KVM vGPU + GRID driver + Activates required systemd services
-    vgpu_driver_src.sha256 = "sha256-tFgDf7ZSIZRkvImO+9YglrLimGJMZ/fz25gjUT0TfDo="; # use if you're getting the `Unfortunately, we cannot download file...` error # find hash with `nix hash file foo.txt`        
+    vgpu_driver_src.sha256 = "sha256-tFgDf7ZSIZRkvImO+9YglrLimGJMZ/fz25gjUT0TfDo="; # use if you're getting the `Unfortunately, we cannot download file...` error # find hash with `nix hash file foo.txt`  
+    pinKernel = false; # pins and installs a specific version of the 6.1 Kernel, recommended only if experiencing problems
     fastapi-dls = { # License server for unrestricted use of the vgpu driver in guests
       enable = true;
       #local_ipv4 = "192.168.1.109"; # Hostname is autodetected, use this setting to override
@@ -61,7 +67,7 @@ This module unlocks vGPU functionality on your consumer nvidia card.
 ```
 - This will attempt to compile and install the driver `535.129.03`, you will be prompted to add it with `nix-store --add-fixed...`, you'll need to get the file [from nvidia](https://www.nvidia.com/object/vGPU-software-driver.html), you have to sign up and request and it might take some days. Refer to the [Discord VGPU-Unlock Community](https://discord.com/invite/5rQsSV3Byq) for support.  
 If you're still getting the `Unfortunately, we cannot download file...` error, use the option `vgpu_driver_src.sha256` to override the hardcoded hash. Find the hash of the file with `nix hash file file.zip`.
-- You might also have to check your kernel, it should work with the kernel 6 series. 
+- You will have to check your kernel, kernel `6.1.` is recommended, higher than that won't work. Check the [Tested In](#tested-in) section to see the tested kernels.
 - If you have a compiled merge driver, you can directly use it with the `useMyDriver` option. Here is an example using the driver in my google drive:
   ```nix
   {
@@ -154,6 +160,7 @@ You can refer to `./guides` for specific goals:
 - kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 22.11.20230428.7449971`. 
 - kernel `5.15.108` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 23.05.20230605.70f7275`.
 - kernel `5.15.82` with a `NVIDIA GeForce RTX 2060 Mobile` in `NNixOS 23.11.20240403.1487bde (Tapir) x86_64`.
+- kernel `6.1.96` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 24.05.20240704.c0d0be0`. 
 
 ## Guest VM
 
