@@ -3,10 +3,12 @@
 This module unlocks vGPU functionality on your consumer nvidia card.
 
 > [!WARNING]  
-> Under development, not usable.
+> Under development, not usable. `mdevctl types` displays nothing
 
 > [!WARNING]  
 > Activating this module may make some games stop working on the host, check [Known Issues](#known-issues).
+
+Documentation to see: https://docs.nvidia.com/vgpu/17.0/grid-vgpu-user-guide/index.html#preparing-virtual-function-for-sr-iov-vgpu
 
 ## Installation:
 
