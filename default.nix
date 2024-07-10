@@ -36,7 +36,7 @@ let
 
   compiled-driver = pkgs.stdenv.mkDerivation {
     name = "driver-compile-${driver-version}";
-      nativeBuildInputs = [ pkgs.p7zip pkgs.unzip pkgs.coreutils pkgs.bash pkgs.zstd pkgs.steam-run];
+      nativeBuildInputs = [ pkgs.p7zip pkgs.unzip pkgs.coreutils pkgs.bash pkgs.zstd ];
         system = "x86_64-linux";
         src = pkgs.fetchFromGitHub {
           owner = "VGPU-Community-Drivers";
@@ -67,7 +67,7 @@ let
           cp -a $src/* .
           cp -a $original_driver_src NVIDIA-Linux-x86_64-${vgpu-driver-version}.run
 
-          ${pkgs.steam-run}/bin/steam-run bash ./patch.sh ${lib.optionalString kernel-at-least-6 "--force-nvidia-gpl-I-know-it-is-wrong --enable-nvidia-gpl-for-experimenting"} --repack general-merge
+          bash ./patch.sh ${lib.optionalString kernel-at-least-6 "--force-nvidia-gpl-I-know-it-is-wrong --enable-nvidia-gpl-for-experimenting"} --repack general-merge
           cp -a NVIDIA-Linux-x86_64-${vgpu-driver-version}-merged-vgpu-kvm-patched.run $out
         '';
   };
