@@ -307,7 +307,7 @@ in
           KillMode = "process";
           ExecStart = "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpu-mgr";
           ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpu-mgr";
-          environment = [
+          Environment = [
             "__RM_NO_VERSION_CHECK=1"
             "LD_LIBRARY_PATH=${pkgs.glib.out}/lib:$LD_LIBRARY_PATH"
             "LD_PRELOAD=${pkgs.glib.out}/lib/libglib-2.0.so"
