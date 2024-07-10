@@ -66,12 +66,8 @@ let
           ${pkgs.unzip}/bin/unzip -j NVIDIA-GRID-Linux-KVM-${driver-version}-${vgpu-driver-version}-${wdys-driver-version}.zip Host_Drivers/NVIDIA-Linux-x86_64-${driver-version}-vgpu-kvm.run
           cp -a $src/* .
           cp -a $original_driver_src NVIDIA-Linux-x86_64-${vgpu-driver-version}.run
-          
-          # Dirtily and lazily modify the patch.sh script to use steam-run FHS
-          substituteInPlace patch.sh \
-            --replace './''${TARGET}/makeself.sh' '${pkgs.steam-run}/bin/steam-run ./''${TARGET}/makeself.sh'
 
-          bash ./patch.sh ${lib.optionalString kernel-at-least-6 "--force-nvidia-gpl-I-know-it-is-wrong --enable-nvidia-gpl-for-experimenting"} --repack general-merge
+          ${pkgs.steam-run}/bin/steam-run bash ./patch.sh ${lib.optionalString kernel-at-least-6 "--force-nvidia-gpl-I-know-it-is-wrong --enable-nvidia-gpl-for-experimenting"} --repack general-merge
           cp -a NVIDIA-Linux-x86_64-${vgpu-driver-version}-merged-vgpu-kvm-patched.run $out
         '';
   };
