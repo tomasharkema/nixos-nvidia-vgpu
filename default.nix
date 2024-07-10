@@ -3,12 +3,12 @@ inputs: { pkgs, lib, config, ... }:
 let
   cfg = config.hardware.nvidia.vgpu;
 
-  driver-version = cfg.useMyDriver.driver-version; # "535.129.03";
+  driver-version = cfg.useMyDriver.driver-version; # "550.90.05";
   # grid driver and wdys driver aren't actually used, but their versions are needed to find some filenames
-  vgpu-driver-version = cfg.useMyDriver.vgpu-driver-version; #"535.129.03";
-  grid-driver-version = "535.129.03";
-  wdys-driver-version = "537.70";
-  grid-version = "16.2";
+  vgpu-driver-version = cfg.useMyDriver.vgpu-driver-version; #"550.90.07";
+  grid-driver-version = "550.90.05";
+  wdys-driver-version = "552.55";
+  grid-version = "17.3";
   kernel-at-least-6 = lib.strings.versionAtLeast config.boot.kernelPackages.kernel.version "6.0";
 in
 let
@@ -35,37 +35,37 @@ let
   } // args);
 
   compiled-driver = pkgs.stdenv.mkDerivation {
-    name = "NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched";
+    name = "driver-compile-NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched";
       nativeBuildInputs = [ pkgs.p7zip pkgs.unzip pkgs.coreutils pkgs.bash pkgs.zstd];
         system = "x86_64-linux";
         src = pkgs.fetchFromGitHub {
           owner = "VGPU-Community-Drivers";
           repo = "vGPU-Unlock-patcher";
-          # 535.129
-          rev = "3765eee908858d069e7b31842f3486095b0846b5";
-          hash = "sha256-PR61ylYgTaWQ/xxMDR8ZUUA5vQNUcZvIt/hqgpAQeNM=";
+          # 550.90
+          rev = "688f451ecb26a9595ed297b5cd5f23c0cebab44e";
+          hash = "sha256-W5470p6dDca+7KH2AsrtSLGbZjo2SX0u+kOqRlDb2lQ=";
           fetchSubmodules = true;
           deepClone = true;
         };
         original_driver_src = pkgs.fetchurl {
           # Hosted by nvidia
-          url = "https://download.nvidia.com/XFree86/Linux-x86_64/${driver-version}/NVIDIA-Linux-x86_64-${driver-version}.run";
-          sha256 = "e6dca5626a2608c6bb2a046cfcb7c1af338b9e961a7dd90ac09bb8a126ff002e";
+          url = "https://download.nvidia.com/XFree86/Linux-x86_64/${vgpu-driver-version}/NVIDIA-Linux-x86_64-${vgpu-driver-version}.run";
+          sha256 = "sha256-Uaz1edWpiE9XOh0/Ui5/r6XnhB4iqc7AtLvq4xsLlzM=";
         };
         vgpu_driver_src = requireFile {
-            name = "NVIDIA-GRID-Linux-KVM-${driver-version}-${wdys-driver-version}.zip";
-            sha256 = cfg.vgpu_driver_src.sha256; # nix hash file foo.txt
+            name = "NVIDIA-GRID-Linux-KVM-${driver-version}-${vgpu-driver-version}-${wdys-driver-version}.zip";
+            sha256 = cfg.vgpu_driver_src.sha256;
           };
  
         buildPhase = ''
           mkdir -p $out
           cd $TMPDIR
-          #ln -s $original_driver_src NVIDIA-Linux-x86_64-${driver-version}.run
-          ln -s $vgpu_driver_src NVIDIA-GRID-Linux-KVM-${driver-version}-${wdys-driver-version}.zip
+          #ln -s $original_driver_src NVIDIA-Linux-x86_64-${vgpu-driver-version}.run
+          ln -s $vgpu_driver_src NVIDIA-GRID-Linux-KVM-${driver-version}-${vgpu-driver-version}-${wdys-driver-version}.zip
           
-          ${pkgs.unzip}/bin/unzip -j NVIDIA-GRID-Linux-KVM-${driver-version}-${wdys-driver-version}.zip Host_Drivers/NVIDIA-Linux-x86_64-${driver-version}-vgpu-kvm.run
+          ${pkgs.unzip}/bin/unzip -j NVIDIA-GRID-Linux-KVM-${driver-version}-${vgpu-driver-version}-${wdys-driver-version}.zip Host_Drivers/NVIDIA-Linux-x86_64-${driver-version}-vgpu-kvm.run
           cp -a $src/* .
-          cp -a $original_driver_src NVIDIA-Linux-x86_64-${driver-version}.run
+          cp -a $original_driver_src NVIDIA-Linux-x86_64-${vgpu-driver-version}.run
           
           bash ./patch.sh ${lib.optionalString kernel-at-least-6 "--force-nvidia-gpl-I-know-it-is-wrong --enable-nvidia-gpl-for-experimenting"} --repack general-merge
           cp -a NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched.run $out
@@ -88,7 +88,7 @@ in
       };
 
       vgpu_driver_src.sha256 = mkOption {
-        default = "sha256-tFgDf7ZSIZRkvImO+9YglrLimGJMZ/fz25gjUT0TfDo=";
+        default = "sha256-qzTsKUKKdplZFnmcz4r5zGGTruyM7e85zRu3hQDc0gA=";
         type = types.str;
         description = ''
           sha256 of the vgpu_driver file in case you're having trouble adding it with for Example `nix-store --add-fixed sha256 NVIDIA-GRID-Linux-KVM-535.129.03-537.70.zip`
@@ -135,7 +135,7 @@ in
               '';
             };
             driver-version = mkOption {
-              default = "535.129.03";
+              default = "550.90.05";
               type = types.str;
               example = "525.105.17";
               description = ''
@@ -143,7 +143,7 @@ in
               '';
             };
             vgpu-driver-version = mkOption {
-              default = "535.129.03";
+              default = "550.90.07";
               type = types.str;
               example = "525.105.17";
               description = ''

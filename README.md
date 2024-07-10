@@ -3,6 +3,9 @@
 This module unlocks vGPU functionality on your consumer nvidia card.
 
 > [!WARNING]  
+> Under development, not usable.
+
+> [!WARNING]  
 > Activating this module may make some games stop working on the host, check [Known Issues](#known-issues).
 
 ## Installation:
