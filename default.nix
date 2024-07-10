@@ -35,8 +35,8 @@ let
   } // args);
 
   compiled-driver = pkgs.stdenv.mkDerivation {
-    name = "driver-compile-NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched";
-      nativeBuildInputs = [ pkgs.p7zip pkgs.unzip pkgs.coreutils pkgs.bash pkgs.zstd];
+    name = "driver-compile-${driver-version}";
+      nativeBuildInputs = [ pkgs.p7zip pkgs.unzip pkgs.coreutils pkgs.bash pkgs.zstd pkgs.steam-run];
         system = "x86_64-linux";
         src = pkgs.fetchFromGitHub {
           owner = "VGPU-Community-Drivers";
@@ -67,8 +67,12 @@ let
           cp -a $src/* .
           cp -a $original_driver_src NVIDIA-Linux-x86_64-${vgpu-driver-version}.run
           
+          # Dirtily and lazily modify the patch.sh script to use steam-run FHS
+          substituteInPlace patch.sh \
+            --replace './''${TARGET}/makeself.sh' '${pkgs.steam-run}/bin/steam-run ./''${TARGET}/makeself.sh'
+
           bash ./patch.sh ${lib.optionalString kernel-at-least-6 "--force-nvidia-gpl-I-know-it-is-wrong --enable-nvidia-gpl-for-experimenting"} --repack general-merge
-          cp -a NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched.run $out
+          cp -a NVIDIA-Linux-x86_64-${vgpu-driver-version}-merged-vgpu-kvm-patched.run $out
         '';
   };
 in
@@ -203,12 +207,12 @@ in
         { patches ? [], postUnpack ? "", postPatch ? "", preFixup ? "", ... }@attrs: {
         # Overriding https://github.com/NixOS/nixpkgs/tree/nixos-unstable/pkgs/os-specific/linux/nvidia-x11
         # that gets called from the option hardware.nvidia.package from here: https://github.com/NixOS/nixpkgs/blob/nixos-22.11/nixos/modules/hardware/video/nvidia.nix
-        name = "NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched-${config.boot.kernelPackages.kernel.version}";
-        version = "${driver-version}";
+        name = "NVIDIA-Linux-x86_64-${vgpu-driver-version}-merged-vgpu-kvm-patched-${config.boot.kernelPackages.kernel.version}";
+        version = "${vgpu-driver-version}";
 
         # the new driver (compiled in a derivation above)
         src = if (!cfg.useMyDriver.enable) then
-          "${compiled-driver}/NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched.run"
+          "${compiled-driver}/NVIDIA-Linux-x86_64-${vgpu-driver-version}-merged-vgpu-kvm-patched.run"
           else
             if (cfg.useMyDriver.getFromRemote != null) then
               cfg.useMyDriver.getFromRemote
