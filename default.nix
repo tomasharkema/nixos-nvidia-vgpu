@@ -203,74 +203,86 @@ in
     
     ( lib.mkIf cfg.enable {
   
-      hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable.overrideAttrs (
-        { patches ? [], postUnpack ? "", postPatch ? "", preFixup ? "", ... }@attrs: {
-        # Overriding https://github.com/NixOS/nixpkgs/tree/nixos-unstable/pkgs/os-specific/linux/nvidia-x11
-        # that gets called from the option hardware.nvidia.package from here: https://github.com/NixOS/nixpkgs/blob/nixos-22.11/nixos/modules/hardware/video/nvidia.nix
-        name = "NVIDIA-Linux-x86_64-${vgpu-driver-version}-merged-vgpu-kvm-patched-${config.boot.kernelPackages.kernel.version}";
-        version = "${vgpu-driver-version}";
+    hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable.overrideAttrs (
+      { patches ? [], postUnpack ? "", postPatch ? "", preFixup ? "", ... }@attrs: {
+      # Overriding https://github.com/NixOS/nixpkgs/tree/nixos-unstable/pkgs/os-specific/linux/nvidia-x11
+      # that gets called from the option hardware.nvidia.package from here: https://github.com/NixOS/nixpkgs/blob/nixos-22.11/nixos/modules/hardware/video/nvidia.nix
+      name = "NVIDIA-Linux-x86_64-${vgpu-driver-version}-merged-vgpu-kvm-patched-${config.boot.kernelPackages.kernel.version}";
+      version = "${vgpu-driver-version}";
 
-        # the new driver (compiled in a derivation above)
-        src = if (!cfg.useMyDriver.enable) then
-          "${compiled-driver}/NVIDIA-Linux-x86_64-${vgpu-driver-version}-merged-vgpu-kvm-patched.run"
+      # the new driver (compiled in a derivation above)
+      src = if (!cfg.useMyDriver.enable) then
+        "${compiled-driver}/NVIDIA-Linux-x86_64-${vgpu-driver-version}-merged-vgpu-kvm-patched.run"
+        else
+          if (cfg.useMyDriver.getFromRemote != null) then
+            cfg.useMyDriver.getFromRemote
           else
-            if (cfg.useMyDriver.getFromRemote != null) then
-              cfg.useMyDriver.getFromRemote
-            else
-              pkgs.requireFile {
-                name = cfg.useMyDriver.name;
-                url = "compile it with the repo https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher 😉, also if you got this error the hash might be wrong, use `nix hash file <file>`";
-                # The hash below was computed like so:
-                #
-                # $ nix hash file foo.txt
-                # sha256-9fhYGu9fqxcQC2Kc81qh2RMo1QcLBUBo8U+pPn+jthQ=
-                #
-                sha256 = cfg.useMyDriver.sha256;
-              };
+            pkgs.requireFile {
+              name = cfg.useMyDriver.name;
+              url = "compile it with the repo https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher 😉, also if you got this error the hash might be wrong, use `nix hash file <file>`";
+              # The hash below was computed like so:
+              #
+              # $ nix hash file foo.txt
+              # sha256-9fhYGu9fqxcQC2Kc81qh2RMo1QcLBUBo8U+pPn+jthQ=
+              #
+              sha256 = cfg.useMyDriver.sha256;
+            };
 
-        postPatch = if postPatch != null then postPatch + ''
-          # Move path for vgpuConfig.xml into /etc
-          sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
+      postPatch = if postPatch != null then postPatch + ''
+        # Move path for vgpuConfig.xml into /etc
+        sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
 
-          substituteInPlace sriov-manage \
-            --replace lspci ${pkgs.pciutils}/bin/lspci \
-            --replace setpci ${pkgs.pciutils}/bin/setpci
-        '' else ''
-          # Move path for vgpuConfig.xml into /etc
-          sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
+        substituteInPlace sriov-manage \
+          --replace lspci ${pkgs.pciutils}/bin/lspci \
+          --replace setpci ${pkgs.pciutils}/bin/setpci
+      '' else ''
+        # Move path for vgpuConfig.xml into /etc
+        sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
 
-          substituteInPlace sriov-manage \
-            --replace lspci ${pkgs.pciutils}/bin/lspci \
-            --replace setpci ${pkgs.pciutils}/bin/setpci
-        '';
+        substituteInPlace sriov-manage \
+          --replace lspci ${pkgs.pciutils}/bin/lspci \
+          --replace setpci ${pkgs.pciutils}/bin/setpci
+      '';
 
-        /*
-        postPatch = postPatch + ''
-          # Move path for vgpuConfig.xml into /etc
-          sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
+      # HACK: Using preFixup instead of postInstall since nvidia-x11 builder.sh doesn't support hooks
+      preFixup = preFixup + ''
+        echo "Directory structure during fixup phase:"
+        find $PWD
 
-          substituteInPlace sriov-manage \
-            --replace lspci ${pkgs.pciutils}/bin/lspci \
-            --replace setpci ${pkgs.pciutils}/bin/setpci
-        ''; */
-
-        # HACK: Using preFixup instead of postInstall since nvidia-x11 builder.sh doesn't support hooks
-        preFixup = preFixup + ''
-          for i in libnvidia-vgpu.so.${vgpu-driver-version} libnvidia-vgxcfg.so.${vgpu-driver-version}; do
+        # Ensure the files exist before attempting to install
+        for i in libnvidia-vgpu.so.${vgpu-driver-version} libnvidia-vgxcfg.so.${vgpu-driver-version}; do
+          if [ -f "$i" ]; then
             install -Dm755 "$i" "$out/lib/$i"
-          done
-          patchelf --set-rpath ${pkgs.stdenv.cc.cc.lib}/lib $out/lib/libnvidia-vgpu.so.${vgpu-driver-version}
-          install -Dm644 vgpuConfig.xml $out/vgpuConfig.xml
+            patchelf --set-rpath ${pkgs.stdenv.cc.cc.lib}/lib $out/lib/$i
+          else
+            echo "Warning: $i not found!"
+          fi
+        done
 
-          for i in nvidia-vgpud nvidia-vgpu-mgr; do
+        if [ -f "vgpuConfig.xml" ]; then
+          install -Dm644 vgpuConfig.xml $out/vgpuConfig.xml
+        else
+          echo "Warning: vgpuConfig.xml not found!"
+        fi
+
+        for i in nvidia-vgpud nvidia-vgpu-mgr; do
+          if [ -f "$i" ]; then
             install -Dm755 "$i" "$bin/bin/$i"
             # stdenv.cc.cc.lib is for libstdc++.so needed by nvidia-vgpud
             patchelf --interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" \
               --set-rpath $out/lib "$bin/bin/$i"
-          done
+          else
+            echo "Warning: $i not found!"
+          fi
+        done
+
+        if [ -f "sriov-manage" ]; then
           install -Dm755 sriov-manage $bin/bin/sriov-manage
-        '';
-      });
+        else
+          echo "Warning: sriov-manage not found!"
+        fi
+      '';
+    });
 
       systemd.services.nvidia-vgpud = {
         description = "NVIDIA vGPU Daemon";
