@@ -256,7 +256,8 @@ For more help [Join VGPU-Unlock discord for Support](https://discord.com/invite/
 ## Known Issues
 
 Biggest problems of the module:
-- Some games stop working on host (DXVK?), [Issue on GPU Unlocking discord](https://discord.com/channels/829786927829745685/1192188752915869767)
+- **Some games stop working on host** (DXVK?), [Issue on GPU Unlocking discord](https://discord.com/channels/829786927829745685/1192188752915869767)
+- **Very inefficient installation process**: it installs 555 driver - it installs 535 vgpu driver - 535 driver compiles, get unpacked (by [patcher](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher/blob/535.129/patch.sh)) then repacked (because of --repack) and then unpacked again by builder.sh (see [here](https://github.com/NixOS/nixpkgs/blob/master/pkgs/os-specific/linux/nvidia-x11/builder.sh) and [here](https://github.com/NixOS/nixpkgs/blob/master/pkgs/os-specific/linux/nvidia-x11/generic.nix#L114)) in the process. 555 compiles because why not.
 - ~~Core dump from nvidia-vgpud happening bc of frida?~~(fixed, frida is not even needed anymore, it was for the old vgpu repo)
 - ~~Grabs merged driver from my google drive instead of compiling it~~(fixed by [letmeiiiin](https://github.com/letmeiiiin)'s [work](https://github.com/letmeiiiin/nixos-nvidia-vgpu)! Big thanks!)
 - ~~Commands need to be ran manually for the docker volume to work: Still needs `--impure`: `access to absolute path '/opt/docker' is forbidden in pure eval mode (use '--impure' to override)`~~ (fixed, `--impure` not needed anymore! Big thanks to [physics-enthusiast](https://github.com/physics-enthusiast)'s [contributions](https://github.com/Yeshey/nixos-nvidia-vgpu/pull/2))
