@@ -67,6 +67,8 @@ let
           cp -a $src/* .
           cp -a $original_driver_src NVIDIA-Linux-x86_64-${vgpu-driver-version}.run
 
+          sed -i '0,/^    vcfgclone \''${TARGET}\/vgpuConfig.xml /s//${lib.attrsets.foldlAttrs (s: n: v: s + "    vcfgclone \\\${TARGET}\\/vgpuConfig.xml 0x${builtins.substring 0 4 v} 0x${builtins.substring 5 4 v} 0x${builtins.substring 0 4 n} 0x${builtins.substring 5 4 n}\\n") "" cfg.copyVGPUProfiles}&/' ./patch.sh
+          
           bash ./patch.sh ${lib.optionalString kernel-at-least-6 "--force-nvidia-gpl-I-know-it-is-wrong --enable-nvidia-gpl-for-experimenting"} --repack general-merge
           cp -a NVIDIA-Linux-x86_64-${vgpu-driver-version}-merged-vgpu-kvm-patched.run $out
         '';
@@ -84,6 +86,19 @@ in
           This will set kernel 6.1, a long term support release(LTS), higher kernels won't work with this module.
           If the inputs of this module aren't set to follow the rest of nixpkgs in the inputs (inputs.nixpkgs.follows = "nixpkgs";), then this means your kernel will also be pinned to the nixpkgs revision of this module known to work, and you won't recieve the security updates from the LTS (until 31 Dec 2026).
           Not recommended unless you are experiencing problems.
+        '';
+      };
+
+      copyVGPUProfiles = mkOption {
+        default = {};
+        type = types.attrs;
+        example = {
+          "1122:3344" = "5566:7788";
+        };
+        description = ''
+          Adds vcfgclone lines to the patch.sh script of the vgpu-unlock-patcher.
+          They copy the vGPU profiles of officially supported GPUs specified by the attribute value to the video card specified by the attribute name. Not required when vcfgclone line with your GPU is already in the script. CASE-SENSETIVE, use UPPER case. Copy profiles from a GPU with a similar chip or at least architecture, otherwise nothing will work. See patch.sh for working vcfgclone examples.
+          In the example option value, it will copy the vGPU profiles of 5566:7788 to GPU 1122:3344 (vcfgclone ''${TARGET}/vgpuConfig.xml 0x5566 0x7788 0x1122 0x3344 in patch.sh).
         '';
       };
 
