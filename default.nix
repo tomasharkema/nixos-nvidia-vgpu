@@ -123,29 +123,37 @@ in {
 
           echo "${nvidia-vgpu-kvm-src}"
 
-          cp -r ${nvidia-vgpu-kvm-src}/init-scripts .
+          cp -r ${nvidia-vgpu-kvm-src}/init-scripts $sourceRoot
 
-          mkdir -p kernel/common/inc
-          mkdir -p kernel/nvidia
+          mkdir -p $sourceRoot/kernel/common/inc
+          mkdir -p $sourceRoot/kernel/nvidia
 
-          cp ${nvidia-vgpu-kvm-src}/kernel/common/inc/nv-vgpu-vfio-interface.h kernel/common/inc/nv-vgpu-vfio-interface.h
-          cp ${nvidia-vgpu-kvm-src}/kernel/nvidia/nv-vgpu-vfio-interface.c kernel/nvidia/nv-vgpu-vfio-interface.c
-          echo "NVIDIA_SOURCES += nvidia/nv-vgpu-vfio-interface.c" >> kernel/nvidia/nvidia-sources.Kbuild
-          cp -r ${nvidia-vgpu-kvm-src}/kernel/nvidia-vgpu-vfio kernel/nvidia-vgpu-vfio
+          cp ${nvidia-vgpu-kvm-src}/kernel/common/inc/nv-vgpu-vfio-interface.h $sourceRoot/kernel/common/inc/nv-vgpu-vfio-interface.h
+          cp ${nvidia-vgpu-kvm-src}/kernel/nvidia/nv-vgpu-vfio-interface.c $sourceRoot/kernel/nvidia/nv-vgpu-vfio-interface.c
+          echo "NVIDIA_SOURCES += nvidia/nv-vgpu-vfio-interface.c" >> $sourceRoot/kernel/nvidia/nvidia-sources.Kbuild
+          cp -r ${nvidia-vgpu-kvm-src}/kernel/nvidia-vgpu-vfio $sourceRoot/kernel/nvidia-vgpu-vfio
 
-          for i in libnvidia-vgpu.so.${vgpuVersion} libnvidia-vgxcfg.so.${vgpuVersion} nvidia-vgpu-mgr nvidia-vgpud vgpuConfig.xml sriov-manage; do
-            cp ${nvidia-vgpu-kvm-src}/$i $i
-          done
+          cp ${nvidia-vgpu-kvm-src}/libnvidia-vgpu.so.${vgpuVersion} $sourceRoot
+          cp ${nvidia-vgpu-kvm-src}/libnvidia-vgxcfg.so.${vgpuVersion} $sourceRoot
+          cp ${nvidia-vgpu-kvm-src}/nvidia-vgpu-mgr $sourceRoot
+          cp ${nvidia-vgpu-kvm-src}/nvidia-vgpud $sourceRoot
+          cp ${nvidia-vgpu-kvm-src}/vgpuConfig.xml $sourceRoot
+          cp ${nvidia-vgpu-kvm-src}/sriov-manage $sourceRoot
 
           chmod -R u+rw .
         '';
 
         postPatch = ''
           ${lib.optionalString (postPatch ? "") postPatch}
-          # Move path for vgpuConfig.xml into /etc
-          sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
 
-          substituteInPlace sriov-manage \
+          echo "PATCH ROOT! $(pwd) $src $out"
+
+          ls -la
+
+          # Move path for vgpuConfig.xml into /etc
+          sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' ./nvidia-vgpud
+
+          substituteInPlace ./sriov-manage \
             --replace lspci ${pkgs.pciutils}/bin/lspci \
             --replace setpci ${pkgs.pciutils}/bin/setpci
         '';
