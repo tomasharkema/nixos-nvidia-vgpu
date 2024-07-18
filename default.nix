@@ -14,6 +14,13 @@
   gridVersion = "550.90.07";
   guestVersion = "552.74";
 
+  gpuPatches = pkgs.fetchFromGitLab {
+    owner = "polloloco";
+    repo = "vgpu-proxmox";
+    rev = "eeca1f0990c917ae10ca0a3b0c71a7c94841e29a";
+    hash = "sha256-qbZ+A3Q0TS9dyfSjdkNn7yu7kJRYAaQwmOvpJrxVvj0=";
+  };
+
   combinedZipName = "NVIDIA-GRID-Linux-KVM-${vgpuVersion}-${gridVersion}-${guestVersion}.zip";
   requireFile = {name, ...} @ args:
     pkgs.requireFile (rec {
@@ -35,7 +42,7 @@
     pkgs.runCommand "nvidia-${vgpuVersion}-vgpu-kvm-src" {
       src = requireFile {
         name = "NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm.run";
-        sha256 = "00ay1f434dbls6p0kaawzc6ziwlp9dnkg114ipg9xx8xi4360zzl";
+        sha256 = "17fanpgxf464qvra8bf6m9vkyn7iw0zx4yvw278755fjbwzk26xw";
       };
     } ''
       mkdir $out
@@ -43,28 +50,31 @@
 
       # From unpackManually() in builder.sh of nvidia-x11 from nixpkgs
       skip=$(sed 's/^skip=//; t; d' $src)
-      tail -n +$skip $src | xz -d | tar xvf -
+      tail -n +$skip $src | ${pkgs.libarchive}/bin/bsdtar xvf -
     '';
 
-  vgpu_unlock = pkgs.stdenv.mkDerivation {
+  vgpu_unlock = pkgs.rustPlatform.buildRustPackage rec {
     name = "nvidia-vgpu-unlock";
-    version = "unstable-2021-04-22";
+    version = "2.4.0";
 
     src = pkgs.fetchFromGitHub {
-      owner = "DualCoder";
-      repo = "vgpu_unlock";
-      rev = "1888236c75d8eac673695be8b000f0b065111c51";
-      sha256 = "0s8bmscb8irj1sggfg1fhacqd1lh59l326bnrk4a2g4qngsbkix3";
+      owner = "mbilker";
+      repo = "vgpu_unlock-rs";
+      rev = "v${version}";
+      hash = "sha256-N/JtAvwiEyGxh41KkxVyCR/utewOF1MrAjsTaVoekzM=";
     };
 
-    buildInputs = [(pythonPackages.python.withPackages (p: [p.frida-python]))];
+    cargoLock = {
+      lockFile = ./Cargo.lock;
+    };
+    # buildInputs = [(pythonPackages.python.withPackages (p: [p.frida-python]))];
 
-    postPatch = ''
-      substituteInPlace vgpu_unlock \
-        --replace /bin/bash ${pkgs.bash}/bin/bash
-    '';
+    # postPatch = ''
+    #   substituteInPlace vgpu_unlock \
+    #     --replace /bin/bash ${pkgs.bash}/bin/bash
+    # '';
 
-    installPhase = "install -Dm755 vgpu_unlock $out/bin/vgpu_unlock";
+    # installPhase = "install -Dm755 vgpu_unlock $out/bin/vgpu_unlock";
   };
 in {
   options = {
@@ -93,25 +103,33 @@ in {
 
         src = requireFile {
           name = "NVIDIA-Linux-x86_64-${gridVersion}-grid.run";
-          sha256 = "0smvmxalxv7v12m0hvd5nx16jmcc7018s8kac3ycmxam8l0k9mw9";
+          sha256 = "03lfr9gq6bwl88ihw1g85fs0qj30dn6ncxd20d1phxadrgwin7c5";
         };
 
         patches =
           patches
-          ++ [
-            ./nvidia-vgpu-merge.patch
-          ]
-          ++ lib.optional cfg.unlock.enable
-          (pkgs.substituteAll {
-            src = ./nvidia-vgpu-unlock.patch;
-            vgpu_unlock = vgpu_unlock.src;
-          });
+          # ++ [
+          #   ./nvidia-vgpu-merge.patch
+          # ]
+          # ++ lib.optional cfg.unlock.enable
+          # (pkgs.substituteAll {
+          #   src = ./nvidia-vgpu-unlock.patch;
+          #   vgpu_unlock = vgpu_unlock.src;
+          # })
+          ;
 
         postUnpack = ''
-          ${postUnpack ? ""}
+          ${postUnpack}
           # More merging, besides patch above
+
+          echo "${nvidia-vgpu-kvm-src}"
+
           cp -r ${nvidia-vgpu-kvm-src}/init-scripts .
-          cp ${nvidia-vgpu-kvm-src}/kernel/common/inc/nv-vgpu-vfio-interface.h kernel/common/inc//nv-vgpu-vfio-interface.h
+
+          mkdir -p kernel/common/inc
+          mkdir -p kernel/nvidia
+
+          cp ${nvidia-vgpu-kvm-src}/kernel/common/inc/nv-vgpu-vfio-interface.h kernel/common/inc/nv-vgpu-vfio-interface.h
           cp ${nvidia-vgpu-kvm-src}/kernel/nvidia/nv-vgpu-vfio-interface.c kernel/nvidia/nv-vgpu-vfio-interface.c
           echo "NVIDIA_SOURCES += nvidia/nv-vgpu-vfio-interface.c" >> kernel/nvidia/nvidia-sources.Kbuild
           cp -r ${nvidia-vgpu-kvm-src}/kernel/nvidia-vgpu-vfio kernel/nvidia-vgpu-vfio
@@ -124,7 +142,7 @@ in {
         '';
 
         postPatch = ''
-          ${postPatch ? ""}
+          ${lib.optionalString (postPatch ? "") postPatch}
           # Move path for vgpuConfig.xml into /etc
           sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' nvidia-vgpud
 
@@ -135,7 +153,7 @@ in {
 
         # HACK: Using preFixup instead of postInstall since nvidia-x11 builder.sh doesn't support hooks
         preFixup = ''
-          ${preFixup ? ""}
+          ${preFixup}
           for i in libnvidia-vgpu.so.${vgpuVersion} libnvidia-vgxcfg.so.${vgpuVersion}; do
             install -Dm755 "$i" "$out/lib/$i"
           done
