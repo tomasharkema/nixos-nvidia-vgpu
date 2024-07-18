@@ -7,9 +7,9 @@ let
   pythonPackages = pkgs.python311Packages;
   # frida = pythonPackages.callPackage ./frida {};
 
-  vgpuVersion = "460.32.04";
-  gridVersion = "460.32.03";
-  guestVersion = "461.33";
+  vgpuVersion = "550.90.05";
+  gridVersion = "550.90.07";
+  guestVersion = "552.74";
 
   combinedZipName = "NVIDIA-GRID-Linux-KVM-${vgpuVersion}-${gridVersion}-${guestVersion}.zip";
   requireFile = { name, ... }@args: pkgs.requireFile (rec {
