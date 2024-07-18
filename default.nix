@@ -196,7 +196,7 @@ in {
       wants = ["syslog.target"];
       wantedBy = ["multi-user.target"];
 
-      environment.LD_PRELOAD = "${vgpu_unlock-rs}/lib/vgpu_unlock_rs.so";
+      environment.LD_PRELOAD = "${vgpu_unlock-rs}/lib/libvgpu_unlock_rs.so";
 
       serviceConfig = {
         Type = "forking";
