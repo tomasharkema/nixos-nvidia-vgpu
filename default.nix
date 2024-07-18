@@ -53,29 +53,7 @@
       tail -n +$skip $src | ${pkgs.libarchive}/bin/bsdtar xvf -
     '';
 
-  vgpu_unlock = pkgs.rustPlatform.buildRustPackage rec {
-    name = "nvidia-vgpu-unlock";
-    version = "2.4.0";
-
-    src = pkgs.fetchFromGitHub {
-      owner = "mbilker";
-      repo = "vgpu_unlock-rs";
-      rev = "v${version}";
-      hash = "sha256-N/JtAvwiEyGxh41KkxVyCR/utewOF1MrAjsTaVoekzM=";
-    };
-
-    cargoLock = {
-      lockFile = ./Cargo.lock;
-    };
-    # buildInputs = [(pythonPackages.python.withPackages (p: [p.frida-python]))];
-
-    # postPatch = ''
-    #   substituteInPlace vgpu_unlock \
-    #     --replace /bin/bash ${pkgs.bash}/bin/bash
-    # '';
-
-    # installPhase = "install -Dm755 vgpu_unlock $out/bin/vgpu_unlock";
-  };
+  vgpu_unlock = pkgs.callPackage ./vgpu_unlock-rs {};
 in {
   options = {
     hardware.nvidia.vgpu = {
