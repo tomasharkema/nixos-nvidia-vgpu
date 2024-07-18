@@ -63,7 +63,7 @@
       owner = "DualCoder";
       repo = "vgpu_unlock";
       rev = "f432ffc8b7ed245df8858e9b38000d3b8f0352f4";
-      sha256 = "";
+      sha256 = "sha256-o+8j82Ts8/tEREqpNbA5W329JXnwxfPNJoneNE8qcsU=";
     };
 
     # buildInputs = [(pythonPackages.python.withPackages (p: [frida]))];
