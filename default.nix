@@ -53,7 +53,28 @@
       tail -n +$skip $src | ${pkgs.libarchive}/bin/bsdtar xvf -
     '';
 
-  vgpu_unlock = pkgs.callPackage ./vgpu_unlock-rs {};
+  vgpu_unlock-rs = pkgs.callPackage ./vgpu_unlock-rs {};
+
+  vgpu_unlock = pkgs.stdenv.mkDerivation {
+    name = "nvidia-vgpu-unlock";
+    version = "unstable-2024-04-19";
+
+    src = pkgs.fetchFromGitHub {
+      owner = "DualCoder";
+      repo = "vgpu_unlock";
+      rev = "f432ffc8b7ed245df8858e9b38000d3b8f0352f4";
+      sha256 = "";
+    };
+
+    # buildInputs = [(pythonPackages.python.withPackages (p: [frida]))];
+
+    postPatch = ''
+      substituteInPlace vgpu_unlock \
+        --replace /bin/bash ${pkgs.bash}/bin/bash
+    '';
+
+    installPhase = "install -Dm755 vgpu_unlock $out/bin/vgpu_unlock";
+  };
 in {
   options = {
     hardware.nvidia.vgpu = {
@@ -166,6 +187,8 @@ in {
       description = "NVIDIA vGPU Manager Daemon";
       wants = ["syslog.target"];
       wantedBy = ["multi-user.target"];
+
+      environment.LD_PRELOAD = "${vgpu_unlock-rs}/lib/vgpu_unlock_rs.so";
 
       serviceConfig = {
         Type = "forking";
