@@ -3,7 +3,8 @@
   lib,
   config,
   ...
-}: let
+}:
+with lib; let
   cfg = config.hardware.nvidia.vgpu;
 
   mdevctl = pkgs.callPackage ./mdevctl {};
@@ -142,6 +143,8 @@ in {
           cp ${nvidia-vgpu-kvm-src}/sriov-manage $sourceRoot
 
           echo 'ldflags-y += -T ${vgpu_unlock.src}/kern.ld' >> $sourceRoot/kernel/nvidia/nvidia.Kbuild
+          substituteInPlace $sourceRoot/kernel/nvidia/os-interface.c \
+            --replace-fail "#include \"nv-time.h\"" $'#include "nv-time.h"\n#include "${vgpu_unlock.src}/vgpu_unlock_hooks.c"'
 
           chmod -R u+rw .
         '';
@@ -156,8 +159,6 @@ in {
             --replace-fail lspci ${pkgs.pciutils}/bin/lspci \
             --replace-fail setpci ${pkgs.pciutils}/bin/setpci
 
-          substituteInPlace ./kernel/nvidia/os-interface.c \
-            --replace-fail "#include \"nv-time.h\"" $'#include "nv-time.h"\n#include "${vgpu_unlock.src}/vgpu_unlock_hooks.c"'
 
         '';
 
@@ -212,7 +213,23 @@ in {
 
     environment.etc."nvidia-vgpu-xxxxx/vgpuConfig.xml".source = ./vgpuConfig.xml;
 
-    boot.kernelModules = ["nvidia-vgpu-vfio"];
+    boot = {
+      kernelModules = [
+        "nvidia-vgpu-vfio"
+
+        "vfio"
+        "vfio_iommu_type1"
+        "vfio_pci"
+        "vfio_virqfd"
+      ];
+
+      kernelParams = [
+        "intel_iommu=on"
+        "iommu=pt"
+      ];
+
+      blacklistedKernelModules = mkDefault ["nouveau"];
+    };
 
     environment.systemPackages = [mdevctl];
     services.udev.packages = [mdevctl];
