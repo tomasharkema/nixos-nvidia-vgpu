@@ -10,9 +10,9 @@
   pythonPackages = pkgs.python311Packages;
   # frida = pythonPackages.callPackage ./frida {};
 
-  vgpuVersion = "550.90.05";
-  gridVersion = "550.90.07";
-  guestVersion = "552.74";
+  vgpuVersion = "550.54.16";
+  gridVersion = "550.54.15";
+  guestVersion = "551.78";
 
   gpuPatches = pkgs.fetchFromGitLab {
     owner = "polloloco";
@@ -42,7 +42,7 @@
     pkgs.runCommand "nvidia-${vgpuVersion}-vgpu-kvm-src" {
       src = requireFile {
         name = "NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm.run";
-        sha256 = "17fanpgxf464qvra8bf6m9vkyn7iw0zx4yvw278755fjbwzk26xw";
+        sha256 = "18ss9r6pqd5fvayxyvz94sgiszg54y4mv62b4mrmdfk5sxfmpgw3";
       };
     } ''
       mkdir $out
@@ -102,20 +102,19 @@ in {
 
         src = requireFile {
           name = "NVIDIA-Linux-x86_64-${gridVersion}-grid.run";
-          sha256 = "03lfr9gq6bwl88ihw1g85fs0qj30dn6ncxd20d1phxadrgwin7c5";
+          sha256 = "0nm17q9qx3x2w5jjga93pzraplmykbmix365a5gpi96jig98x6g1";
         };
 
         patches =
-          patches
-          # ++ [
-          #   ./nvidia-vgpu-merge.patch
-          # ]
-          # ++ lib.optional cfg.unlock.enable
-          # (pkgs.substituteAll {
-          #   src = ./nvidia-vgpu-unlock.patch;
-          #   vgpu_unlock = vgpu_unlock.src;
-          # })
-          ;
+          patches ++ ["${gpuPatches}/550.54.16.patch"];
+        # ++ [
+        #   ./nvidia-vgpu-merge.patch
+        # ]
+        # ++ lib.optional cfg.unlock.enable
+        # (pkgs.substituteAll {
+        #   src = ./nvidia-vgpu-unlock.patch;
+        #   vgpu_unlock = vgpu_unlock.src;
+        # });
 
         postUnpack = ''
           ${postUnpack}
@@ -146,16 +145,15 @@ in {
         postPatch = ''
           ${lib.optionalString (postPatch ? "") postPatch}
 
-          echo "PATCH ROOT! $(pwd) $src $out"
-
-          ls -la
-
           # Move path for vgpuConfig.xml into /etc
           sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' ./nvidia-vgpud
 
           substituteInPlace ./sriov-manage \
             --replace lspci ${pkgs.pciutils}/bin/lspci \
             --replace setpci ${pkgs.pciutils}/bin/setpci
+
+          substituteInPlace ./kernel/nvidia/os-interface.c \
+            --replace "#include \"nv-time.h\"" $'#include "nv-time.h"\n#include "${vgpu_unlock.src}/vgpu_unlock_hooks.c"'
         '';
 
         # HACK: Using preFixup instead of postInstall since nvidia-x11 builder.sh doesn't support hooks
