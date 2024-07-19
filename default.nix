@@ -11,9 +11,27 @@ with lib; let
   pythonPackages = pkgs.python311Packages;
   # frida = pythonPackages.callPackage ./frida {};
 
-  vgpuVersion = "550.54.16";
-  gridVersion = "550.54.15";
-  guestVersion = "551.78";
+  versions = {
+    "v16.5" = {
+      vgpuVersion = "535.161.05";
+      gridVersion = "535.161.08";
+      guestVersion = "538.46";
+
+      vgpuSha = "1cq8bsmxkla56r0vqr0c5a7b2r1da5df2qvdzqnnm15agqj3w28v";
+      gridSha = "085lybyd3pdnd3gh2p6m0sndw1smc4ds9g6l36liwswf5ycn3bg4";
+    };
+
+    "v17.1" = {
+      vgpuVersion = "550.54.16";
+      gridVersion = "550.54.15";
+      guestVersion = "551.78";
+
+      vgpuSha = "18ss9r6pqd5fvayxyvz94sgiszg54y4mv62b4mrmdfk5sxfmpgw3";
+      gridSha = "0nm17q9qx3x2w5jjga93pzraplmykbmix365a5gpi96jig98x6g1";
+    };
+  };
+
+  driver = versions."${cfg.version}";
 
   gpuPatches = pkgs.fetchFromGitLab {
     owner = "polloloco";
@@ -22,7 +40,7 @@ with lib; let
     hash = "sha256-qbZ+A3Q0TS9dyfSjdkNn7yu7kJRYAaQwmOvpJrxVvj0=";
   };
 
-  combinedZipName = "NVIDIA-GRID-Linux-KVM-${vgpuVersion}-${gridVersion}-${guestVersion}.zip";
+  combinedZipName = "NVIDIA-GRID-Linux-KVM-${driver.vgpuVersion}-${driver.gridVersion}-${driver.guestVersion}.zip";
   requireFile = {name, ...} @ args:
     pkgs.requireFile (rec {
         inherit name;
@@ -40,10 +58,10 @@ with lib; let
       // args);
 
   nvidia-vgpu-kvm-src =
-    pkgs.runCommand "nvidia-${vgpuVersion}-vgpu-kvm-src" {
+    pkgs.runCommand "nvidia-${driver.vgpuVersion}-vgpu-kvm-src" {
       src = requireFile {
-        name = "NVIDIA-Linux-x86_64-${vgpuVersion}-vgpu-kvm.run";
-        sha256 = "18ss9r6pqd5fvayxyvz94sgiszg54y4mv62b4mrmdfk5sxfmpgw3";
+        name = "NVIDIA-Linux-x86_64-${driver.vgpuVersion}-vgpu-kvm.run";
+        sha256 = driver.vgpuSha;
       };
     } ''
       mkdir $out
@@ -86,6 +104,12 @@ in {
         type = lib.types.bool;
         description = "Unlock vGPU functionality for consumer grade GPUs";
       };
+
+      version = mkOption {
+        type = types.str;
+        default = "v16.5";
+        description = "version";
+      };
     };
   };
 
@@ -98,16 +122,16 @@ in {
         preFixup ? "",
         ...
       } @ attrs: {
-        name = "nvidia-x11-${vgpuVersion}-${gridVersion}-${config.boot.kernelPackages.kernel.version}";
-        version = "${vgpuVersion}";
+        name = "nvidia-x11-${driver.vgpuVersion}-${driver.gridVersion}-${config.boot.kernelPackages.kernel.version}";
+        version = "${driver.vgpuVersion}";
 
         src = requireFile {
-          name = "NVIDIA-Linux-x86_64-${gridVersion}-grid.run";
-          sha256 = "0nm17q9qx3x2w5jjga93pzraplmykbmix365a5gpi96jig98x6g1";
+          name = "NVIDIA-Linux-x86_64-${driver.gridVersion}-grid.run";
+          sha256 = driver.gridSha;
         };
 
         patches =
-          patches ++ ["${gpuPatches}/550.54.16.patch"];
+          patches ++ ["${gpuPatches}/${driver.vgpuVersion}.patch"];
         # ++ [
         #   ./nvidia-vgpu-merge.patch
         # ]
@@ -135,8 +159,8 @@ in {
           echo "NVIDIA_SOURCES += nvidia/nv-vgpu-vfio-interface.c" >> $sourceRoot/kernel/nvidia/nvidia-sources.Kbuild
           cp -r ${nvidia-vgpu-kvm-src}/kernel/nvidia-vgpu-vfio $sourceRoot/kernel/nvidia-vgpu-vfio
 
-          cp ${nvidia-vgpu-kvm-src}/libnvidia-vgpu.so.${vgpuVersion} $sourceRoot
-          cp ${nvidia-vgpu-kvm-src}/libnvidia-vgxcfg.so.${vgpuVersion} $sourceRoot
+          cp ${nvidia-vgpu-kvm-src}/libnvidia-vgpu.so.${driver.vgpuVersion} $sourceRoot
+          cp ${nvidia-vgpu-kvm-src}/libnvidia-vgxcfg.so.${driver.vgpuVersion} $sourceRoot
           cp ${nvidia-vgpu-kvm-src}/nvidia-vgpu-mgr $sourceRoot
           cp ${nvidia-vgpu-kvm-src}/nvidia-vgpud $sourceRoot
           cp ${nvidia-vgpu-kvm-src}/vgpuConfig.xml $sourceRoot
@@ -165,10 +189,10 @@ in {
         # HACK: Using preFixup instead of postInstall since nvidia-x11 builder.sh doesn't support hooks
         preFixup = ''
           ${preFixup}
-          for i in libnvidia-vgpu.so.${vgpuVersion} libnvidia-vgxcfg.so.${vgpuVersion}; do
+          for i in libnvidia-vgpu.so.${driver.vgpuVersion} libnvidia-vgxcfg.so.${driver.vgpuVersion}; do
             install -Dm755 "$i" "$out/lib/$i"
           done
-          patchelf --set-rpath ${pkgs.stdenv.cc.cc.lib}/lib $out/lib/libnvidia-vgpu.so.${vgpuVersion}
+          patchelf --set-rpath ${pkgs.stdenv.cc.cc.lib}/lib $out/lib/libnvidia-vgpu.so.${driver.vgpuVersion}
           install -Dm644 vgpuConfig.xml $out/vgpuConfig.xml
 
           for i in nvidia-vgpud nvidia-vgpu-mgr; do
@@ -211,8 +235,10 @@ in {
       };
     };
 
-    environment.etc."nvidia-vgpu-xxxxx/vgpuConfig.xml".source = ./vgpuConfig.xml;
-
+    environment.etc = {
+      "nvidia-vgpu-xxxxx/vgpuConfig.xml".source = "${config.hardware.nvidia.package}/vgpuConfig.xml";
+      "vgpu_unlock/profile_override.toml".text = "";
+    };
     boot = {
       kernelModules = [
         "nvidia-vgpu-vfio"
