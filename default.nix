@@ -130,6 +130,8 @@ in {
           sha256 = driver.gridSha;
         };
 
+        NV_KVM_MIGRATION_UAPI = 1;
+
         patches =
           patches ++ ["${gpuPatches}/${driver.vgpuVersion}.patch"];
         # ++ [
@@ -237,7 +239,17 @@ in {
 
     environment.etc = {
       "nvidia-vgpu-xxxxx/vgpuConfig.xml".source = "${config.hardware.nvidia.package}/vgpuConfig.xml";
-      "vgpu_unlock/profile_override.toml".text = "";
+      "vgpu_unlock/profile_override.toml".text = ''
+        unlock_migration = true
+
+        [profile.nvidia-55]
+        num_displays = 1
+        display_width = 1920
+        display_height = 1080
+        max_pixels = 2073600
+        cuda_enabled = 1
+        frl_enabled = 0
+      '';
     };
     boot = {
       kernelModules = [
