@@ -70,7 +70,7 @@
 
     postPatch = ''
       substituteInPlace vgpu_unlock \
-        --replace /bin/bash ${pkgs.bash}/bin/bash
+        --replace-fail /bin/bash ${pkgs.bash}/bin/bash
     '';
 
     installPhase = "install -Dm755 vgpu_unlock $out/bin/vgpu_unlock";
@@ -141,6 +141,8 @@ in {
           cp ${nvidia-vgpu-kvm-src}/vgpuConfig.xml $sourceRoot
           cp ${nvidia-vgpu-kvm-src}/sriov-manage $sourceRoot
 
+          echo 'ldflags-y += -T ${vgpu_unlock.src}/kern.ld' >> $sourceRoot/kernel/nvidia/nvidia.Kbuild
+
           chmod -R u+rw .
         '';
 
@@ -148,17 +150,15 @@ in {
           ${lib.optionalString (postPatch ? "") postPatch}
 
           # Move path for vgpuConfig.xml into /etc
-          sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-${vgpuVersion}|' ./nvidia-vgpud
+          sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' ./nvidia-vgpud
 
           substituteInPlace ./sriov-manage \
-            --replace lspci ${pkgs.pciutils}/bin/lspci \
-            --replace setpci ${pkgs.pciutils}/bin/setpci
+            --replace-fail lspci ${pkgs.pciutils}/bin/lspci \
+            --replace-fail setpci ${pkgs.pciutils}/bin/setpci
 
           substituteInPlace ./kernel/nvidia/os-interface.c \
-            --replace "#include \"nv-time.h\"" $'#include "nv-time.h"\n#include "${vgpu_unlock.src}/vgpu_unlock_hooks.c"'
+            --replace-fail "#include \"nv-time.h\"" $'#include "nv-time.h"\n#include "${vgpu_unlock.src}/vgpu_unlock_hooks.c"'
 
-          substituteInPlace ./kernel/nvidia/nvidia.Kbuild \
-            --replace "NV_CONFTEST_GENERIC_COMPILE_TESTS += vm_fault_t" $'NV_CONFTEST_GENERIC_COMPILE_TESTS += vm_fault_t\nldflags-y += -T ${vgpu_unlock.src}/kern.ld'
         '';
 
         # HACK: Using preFixup instead of postInstall since nvidia-x11 builder.sh doesn't support hooks
@@ -210,7 +210,7 @@ in {
       };
     };
 
-    environment.etc."nvidia-vgpu-${vgpuVersion}/vgpuConfig.xml".source = ./vgpuConfig.xml;
+    environment.etc."nvidia-vgpu-xxxxx/vgpuConfig.xml".source = ./vgpuConfig.xml;
 
     boot.kernelModules = ["nvidia-vgpu-vfio"];
 
