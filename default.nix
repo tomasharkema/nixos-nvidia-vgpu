@@ -88,7 +88,7 @@ in {
     };
   };
 
-  config = lib.mkIf true {
+  config = lib.mkIf cfg.enable {
     hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable.overrideAttrs (
       {
         patches ? [],
