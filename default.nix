@@ -118,6 +118,8 @@ in {
 
         postUnpack = ''
           ${postUnpack}
+
+
           # More merging, besides patch above
 
           echo "${nvidia-vgpu-kvm-src}"
@@ -208,7 +210,7 @@ in {
       };
     };
 
-    environment.etc."nvidia-vgpu-xxxxx/vgpuConfig.xml".source = config.hardware.nvidia.package + /vgpuConfig.xml;
+    environment.etc."nvidia-vgpu-${vgpuVersion}/vgpuConfig.xml".source = ./vgpuConfig.xml;
 
     boot.kernelModules = ["nvidia-vgpu-vfio"];
 
