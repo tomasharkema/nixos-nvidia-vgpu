@@ -148,7 +148,7 @@ in {
           ${lib.optionalString (postPatch ? "") postPatch}
 
           # Move path for vgpuConfig.xml into /etc
-          sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' ./nvidia-vgpud
+          sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-${vgpuVersion}|' ./nvidia-vgpud
 
           substituteInPlace ./sriov-manage \
             --replace lspci ${pkgs.pciutils}/bin/lspci \
