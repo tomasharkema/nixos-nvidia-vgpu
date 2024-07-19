@@ -154,6 +154,9 @@ in {
 
           substituteInPlace ./kernel/nvidia/os-interface.c \
             --replace "#include \"nv-time.h\"" $'#include "nv-time.h"\n#include "${vgpu_unlock.src}/vgpu_unlock_hooks.c"'
+
+          substituteInPlace ./kernel/nvidia/nvidia.Kbuild \
+            --replace "NV_CONFTEST_GENERIC_COMPILE_TESTS += vm_fault_t" $'NV_CONFTEST_GENERIC_COMPILE_TESTS += vm_fault_t\nldflags-y += -T ${vgpu_unlock.src}/kern.ld'
         '';
 
         # HACK: Using preFixup instead of postInstall since nvidia-x11 builder.sh doesn't support hooks
