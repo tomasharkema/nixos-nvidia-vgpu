@@ -107,7 +107,7 @@ in {
 
       version = mkOption {
         type = types.str;
-        default = "v16.5";
+        default = "v17.1";
         description = "version";
       };
     };
@@ -184,8 +184,6 @@ in {
           substituteInPlace ./sriov-manage \
             --replace-fail lspci ${pkgs.pciutils}/bin/lspci \
             --replace-fail setpci ${pkgs.pciutils}/bin/setpci
-
-
         '';
 
         # HACK: Using preFixup instead of postInstall since nvidia-x11 builder.sh doesn't support hooks
