@@ -176,7 +176,7 @@ You can refer to `./guides` for specific goals:
         The option adds vcfgclone lines to the patch.sh script of the vgpu-unlock-patcher.  
         They copy the vGPU profiles of officially supported GPUs specified by the attribute value ("1E30:12BA" in the example) to the video card specified by the attribute name ("1f11:0000" in the example). Not required when vcfgclone line with your GPU is already in the script. CASE-SENSETIVE, use UPPER case for the attribute value. Copy profiles from a GPU with a similar chip or at least architecture, otherwise nothing will work. See patch.sh for working vcfgclone examples.  
 
-
+        If you found a working vcfgclone line that works and isn't in the repo yet, consider sharing it in the [VGPU-Unlock discord](https://discord.com/invite/5rQsSV3Byq) or with a maintainer of the [VGPU Unlock Community Repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher) for it to be added.
 
 ### Tested in
 
