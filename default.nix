@@ -94,11 +94,12 @@ in
         type = types.attrs;
         example = {
           "1122:3344" = "5566:7788";
+          "1f11:0000" = "1E30:12BA"; # vcfgclone line for RTX 2060 Mobile 6GB. generates: vcfgclone ${TARGET}/vgpuConfig.xml 0x1E30 0x12BA 0x1f11 0x0000
         };
         description = ''
           Adds vcfgclone lines to the patch.sh script of the vgpu-unlock-patcher.
           They copy the vGPU profiles of officially supported GPUs specified by the attribute value to the video card specified by the attribute name. Not required when vcfgclone line with your GPU is already in the script. CASE-SENSETIVE, use UPPER case. Copy profiles from a GPU with a similar chip or at least architecture, otherwise nothing will work. See patch.sh for working vcfgclone examples.
-          In the example option value, it will copy the vGPU profiles of 5566:7788 to GPU 1122:3344 (vcfgclone ''${TARGET}/vgpuConfig.xml 0x5566 0x7788 0x1122 0x3344 in patch.sh).
+          In the first example option value, it will copy the vGPU profiles of 5566:7788 to GPU 1122:3344 (vcfgclone ''${TARGET}/vgpuConfig.xml 0x5566 0x7788 0x1122 0x3344 in patch.sh).
         '';
       };
 

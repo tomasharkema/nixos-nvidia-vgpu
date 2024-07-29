@@ -63,6 +63,9 @@ Documentation to see: https://docs.nvidia.com/vgpu/17.0/grid-vgpu-user-guide/ind
   hardware.nvidia.vgpu = {
     enable = true; # Install NVIDIA KVM vGPU + GRID driver + Activates required systemd services
     vgpu_driver_src.sha256 = "sha256-tFgDf7ZSIZRkvImO+9YglrLimGJMZ/fz25gjUT0TfDo="; # use if you're getting the `Unfortunately, we cannot download file...` error # find hash with `nix hash file foo.txt`  
+    #copyVGPUProfiles = { # Use if your graphics driver isn't supported yet
+    #  "1f11:0000" = "1E30:12BA"; # RTX 2060 Mobile 6GB (is already supported in the repo)
+    #};
     pinKernel = false; # pins and installs a specific version of the 6.1 Kernel, recommended only if experiencing problems
     fastapi-dls = { # License server for unrestricted use of the vgpu driver in guests
       enable = true;
@@ -163,7 +166,22 @@ You can refer to `./guides` for specific goals:
       # GTX 980M -> Tesla M60
       # GTX 950M -> Tesla M10
     ```
-    If yours is not in this list or in the repo, you'll likely have to add support for your graphics card and compile the driver, please refer to [Compile your driver](#compile-your-driver).
+    If yours is not in this list or in the repo, you'll likely have to add support for your graphics card through `copyVGPUProfiles` option, please refer to [The official VGPU-Community-Drivers README](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher) for figuring out the right values for your graphics card.
+  
+      - Use the option as shown in the module configuration options, for example:
+        ```nix
+        copyVGPUProfiles = {
+          "1f11:0000" = "1E30:12BA"; # RTX 2060 Mobile 6GB (is already supported in the repo)
+        };
+        ```
+        would generate the vcfgclone line:  
+        ```sh
+        vcfgclone ${TARGET}/vgpuConfig.xml 0x1E30 0x12BA 0x1f11 0x0000
+        ```
+        The option adds vcfgclone lines to the patch.sh script of the vgpu-unlock-patcher.  
+        They copy the vGPU profiles of officially supported GPUs specified by the attribute value ("1E30:12BA" in the example) to the video card specified by the attribute name ("1f11:0000" in the example). Not required when vcfgclone line with your GPU is already in the script. CASE-SENSETIVE, use UPPER case for the attribute value. Copy profiles from a GPU with a similar chip or at least architecture, otherwise nothing will work. See patch.sh for working vcfgclone examples.  
+
+
 
 ### Tested in
 
@@ -253,7 +271,6 @@ In the case of the merged driver you'll have to get the vgpu driver and the norm
 
 ## To-Do
 
-- Add mechanism to add more cards
 - package mscompress to nixOS and add it to shell.nix (https://github.com/stapelberg/mscompress)
 - Review the module's options, new possible config:
 ```nix
@@ -288,6 +305,7 @@ hardware.nvidia = {
     open = true; # REQUIRES doNotPatchNvidiaOpen to be set to FALSE! Otherwise it will fail
 };
 ```
+- ~~Add mechanism to add more cards through vcfgclone~~ (Added by [mrzenc](https://github.com/mrzenc), thanks!)
 
 ---
 
