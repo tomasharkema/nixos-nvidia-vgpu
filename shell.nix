@@ -10,5 +10,6 @@ pkgs.mkShell {
     coreutils
     bash
     zstd
+    mscompress
   ];
 }

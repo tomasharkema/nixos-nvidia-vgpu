@@ -254,7 +254,6 @@ b761f485-1eac-44bc-8ae6-2a3569881a1a 0000:01:00.0 nvidia-258 (defined)
 ## Compile your drivers
 
 Use `nix-shell` to get the tools to run the [vGPU community repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher), you'll have to clone the branch for the driver you want with submodules, for example: `git clone --recurse-submodules -b 525.105 https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher.git`.  
-Missing `mscompress` to compile the windows guest driver to have CUDA working on windows guests for now tho.
 
 ### Linux Host Merged Driver
 
@@ -266,7 +265,6 @@ In the case of the merged driver you'll have to get the vgpu driver and the norm
 
 ## To-Do
 
-- package mscompress to nixOS and add it to shell.nix (https://github.com/stapelberg/mscompress)
 - Review the module's options, new possible config:
 ```nix
 hardware.nvidia = {
