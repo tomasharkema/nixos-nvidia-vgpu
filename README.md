@@ -82,6 +82,10 @@ Documentation to see: https://docs.nvidia.com/vgpu/17.0/grid-vgpu-user-guide/ind
   If you're still getting the `Unfortunately, we cannot download file...` error, use the option `vgpu_driver_src.sha256` to override the hardcoded hash. Find the hash of the file with `nix hash file file.zip`.
 - You will have to check your kernel, kernel `6.1.` is recommended, higher than that won't work. Check the [Tested In](#tested-in) section to see the tested kernels.
 - If you have a compiled merge driver, you can directly use it with the `useMyDriver` option. Here is an example using the driver in my google drive:
+
+> [!IMPORTANT]  
+> `useMyDriver` is only expected to work with a compiled host merged driver. It's mostly a legacy option intended now for those that had already compiled a driver or want to garantee the module won't ask to add files manually with `nix-store --add-fixed`
+
   ```nix
   {
     inputs,
@@ -190,24 +194,28 @@ You can refer to `./guides` for specific goals:
 - kernel `5.15.82` with a `NVIDIA GeForce RTX 2060 Mobile` in `NNixOS 23.11.20240403.1487bde (Tapir) x86_64`.
 - kernel `6.1.96` with a `NVIDIA GeForce RTX 2060 Mobile` in `NixOS 24.05.20240704.c0d0be0`. 
 
-## Guest VM
+## Guest VMs
 
-### Windows
+### Windows Guest
 
-In the Windows VM you need to install the appropriate drivers too, if you use an A profile([difference between profiles](https://youtu.be/cPrOoeMxzu0?t=1244)) for example (from the `mdevctl types` command) you can use the normal driver from the [nvidia licensing server](#nvidia-drivers), if you want a Q profile, you're gonna need to get the driver from the [nvidia servers](#nvidia-drivers) and patch it with the [community vgpu unlock repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher).
+In the Windows VM you might need to install the appropriate drivers too, if in the host you use an A profile([difference between profiles](https://youtu.be/cPrOoeMxzu0?t=1244)) for example (from the `mdevctl types` command) you can use the normal driver from the [nvidia licensing server](#nvidia-drivers), if you want a Q profile, you're gonna need to get the driver from the [nvidia servers](#nvidia-drivers) and patch it with the [community vgpu unlock repo](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher).
 
 That [didn't work for me](https://discord.com/channels/829786927829745685/830520513834516530/1109199157299793970) tho.
 
-Besides the above profiles there are vGaming profiles, the ones I recommend, I used the special `GeForce RTX 2070-` profiles (from `mdevctl types`).  
+Besides the above profiles there are vGaming profiles for the host, the ones I recommend, I used the special `GeForce RTX 2070-` profiles (from `mdevctl types`).  
 If using this profile, you should be able to install the normal corresponding nvidia driver for the windows guest, it will support vulkan, opengl, directx and such for games but not CUDA.  
 If you're having trouble with the licensing (altho fastapi-dls should be able to deal with it), you might have to install a specific driver like [this one](https://nvidia-gaming.s3.us-east-1.amazonaws.com/windows/528.49_Cloud_Gaming_win10_win11_server2019_server2022_dch_64bit_international.exe).   
-Here is the explenation of where that driver is from:
+Here is the explanation of where that driver is from:
 > vGaming is specially licensed.  
 > there's no trial and you need to buy a compute cluster from nuhvidya.  
 > But Amazon has this and they host the drivers for people to use.  
 > The link comes from their bucket that has the vGaming drivers
 
 Ask in the [VGPU-Unlock discord](https://discord.com/invite/5rQsSV3Byq) for the correct version if this is the case.
+
+### Linux Guest
+
+(Untested) You likely need to install the nvidia grid drivers in the guest. There isn't a module to get them to work in nixOS as far as I know (https://github.com/Yeshey/nixos-nvidia-vgpu/issues/5).
 
 ### nvidia-drivers
 
@@ -224,7 +232,7 @@ To check and match versions see [here](https://docs.nvidia.com/grid/index.html).
 ## Additional Notes
 
 To test if everything is installed correctly run `nvidia-smi vgpu`. If there is no output something went wrong with the installation.  
-Also test `mdevctl types`, if there is no output, maybe your graphics card isn't supported yet or you have an incompatible kernel. (TODO: add setting to modify the [vcfgclone lines](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher#usage))
+Also test `mdevctl types`, if there is no output, maybe your graphics card isn't supported yet or you have an incompatible kernel.
 
 You can also check if the services `nvidia-vgpu-mgr` and `nvidia-vgpud` executed without errors with `systemctl status nvidia-vgpud` and `systemctl status nvidia-vgpu-mgr`. (or something like `journalctl -fu nvidia-vgpud` to see the logs in real time)
 
