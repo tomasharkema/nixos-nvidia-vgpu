@@ -97,9 +97,9 @@ with lib; let
 in {
   options = {
     hardware.nvidia.vgpu = {
-      enable = lib.mkEnableOption "vGPU support";
+      enable = mkEnableOption "vGPU support";
 
-      unlock.enable = lib.mkOption {
+      unlock.enable = mkOption {
         default = false;
         type = lib.types.bool;
         description = "Unlock vGPU functionality for consumer grade GPUs";
@@ -113,7 +113,7 @@ in {
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = mkIf cfg.enable {
     hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable.overrideAttrs (
       {
         patches ? [],
@@ -133,15 +133,16 @@ in {
         NV_KVM_MIGRATION_UAPI = 1;
 
         patches =
-          patches ++ ["${gpuPatches}/${driver.vgpuVersion}.patch"];
-        # ++ [
-        #   ./nvidia-vgpu-merge.patch
-        # ]
-        # ++ lib.optional cfg.unlock.enable
-        # (pkgs.substituteAll {
-        #   src = ./nvidia-vgpu-unlock.patch;
-        #   vgpu_unlock = vgpu_unlock.src;
-        # });
+          patches
+          ++ ["${gpuPatches}/${driver.vgpuVersion}.patch"]
+          ++ [
+            ./nvidia-vgpu-merge.patch
+          ]
+          ++ (lib.optional cfg.unlock.enable
+            (pkgs.substituteAll {
+              src = ./nvidia-vgpu-unlock.patch;
+              vgpu_unlock = vgpu_unlock.src;
+            }));
 
         postUnpack = ''
           ${postUnpack}
@@ -176,7 +177,7 @@ in {
         '';
 
         postPatch = ''
-          ${lib.optionalString (postPatch ? "") postPatch}
+          ${optionalString (postPatch ? "") postPatch}
 
           # Move path for vgpuConfig.xml into /etc
           sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' ./nvidia-vgpud
@@ -211,9 +212,11 @@ in {
       wants = ["syslog.target"];
       wantedBy = ["multi-user.target"];
 
+      environment.LD_PRELOAD = "${vgpu_unlock-rs}/lib/libvgpu_unlock_rs.so";
+
       serviceConfig = {
         Type = "forking";
-        ExecStart = "${lib.optionalString cfg.unlock.enable "${vgpu_unlock}/bin/vgpu_unlock "}${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpud";
+        ExecStart = "${optionalString cfg.unlock.enable "${vgpu_unlock}/bin/vgpu_unlock "}${getBin config.hardware.nvidia.package}/bin/nvidia-vgpud";
         ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpud";
         Environment = ["__RM_NO_VERSION_CHECK=1"]; # Avoids issue with API version incompatibility when merging host/client drivers
       };
@@ -229,7 +232,7 @@ in {
       serviceConfig = {
         Type = "forking";
         KillMode = "process";
-        ExecStart = "${lib.optionalString cfg.unlock.enable "${vgpu_unlock}/bin/vgpu_unlock "}${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpu-mgr";
+        ExecStart = "${optionalString cfg.unlock.enable "${vgpu_unlock}/bin/vgpu_unlock "}${getBin config.hardware.nvidia.package}/bin/nvidia-vgpu-mgr";
         ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpu-mgr";
         Environment = ["__RM_NO_VERSION_CHECK=1"];
       };
@@ -249,6 +252,7 @@ in {
         frl_enabled = 0
       '';
     };
+
     boot = {
       kernelModules = [
         "nvidia-vgpu-vfio"
