@@ -7,7 +7,6 @@
 with lib; let
   cfg = config.hardware.nvidia.vgpu;
 
-  mdevctl = pkgs.callPackage ./mdevctl {};
   pythonPackages = pkgs.python311Packages;
   # frida = pythonPackages.callPackage ./frida {};
 
@@ -58,7 +57,8 @@ with lib; let
       // args);
 
   nvidia-vgpu-kvm-src =
-    pkgs.runCommand "nvidia-${driver.vgpuVersion}-vgpu-kvm-src" {
+    pkgs.runCommand "nvidia-${driver.vgpuVersion}-vgpu-kvm-src"
+    {
       src = requireFile {
         name = "NVIDIA-Linux-x86_64-${driver.vgpuVersion}-vgpu-kvm.run";
         sha256 = driver.vgpuSha;
@@ -101,7 +101,7 @@ in {
 
       unlock.enable = mkOption {
         default = false;
-        type = lib.types.bool;
+        type = types.bool;
         description = "Unlock vGPU functionality for consumer grade GPUs";
       };
 
@@ -135,15 +135,15 @@ in {
         patches =
           patches
           ++ ["${gpuPatches}/${driver.vgpuVersion}.patch"]
-          ++ [
-            ./nvidia-vgpu-merge.patch
-          ]
-          ++ (lib.optional cfg.unlock.enable
-            (pkgs.substituteAll {
-              src = ./nvidia-vgpu-unlock.patch;
-              vgpu_unlock = vgpu_unlock.src;
-            }));
-
+          #          ++ [
+          #            ./nvidia-vgpu-merge.patch
+          #          ]
+          #          ++ (lib.optional cfg.unlock.enable
+          #            (pkgs.substituteAll {
+          #              src = ./nvidia-vgpu-unlock.patch;
+          #              vgpu_unlock = vgpu_unlock.src;
+          #            }));
+          ;
         postUnpack = ''
           ${postUnpack}
 
@@ -175,7 +175,7 @@ in {
 
           chmod -R u+rw .
         '';
-
+        # ${postPatch}
         postPatch = ''
           ${optionalString (postPatch ? "") postPatch}
 
@@ -271,7 +271,7 @@ in {
       blacklistedKernelModules = mkDefault ["nouveau"];
     };
 
-    environment.systemPackages = [mdevctl];
-    services.udev.packages = [mdevctl];
+    environment.systemPackages = [pkgs.mdevctl];
+    services.udev.packages = [pkgs.mdevctl];
   };
 }
