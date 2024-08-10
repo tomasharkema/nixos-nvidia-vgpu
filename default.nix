@@ -28,6 +28,15 @@ with lib; let
       vgpuSha = "18ss9r6pqd5fvayxyvz94sgiszg54y4mv62b4mrmdfk5sxfmpgw3";
       gridSha = "0nm17q9qx3x2w5jjga93pzraplmykbmix365a5gpi96jig98x6g1";
     };
+
+    "v17.3" = {
+      vgpuVersion = "550.90.05";
+      gridVersion = "550.90.07";
+      guestVersion = "552.74";
+
+      vgpuSha = "17fanpgxf464qvra8bf6m9vkyn7iw0zx4yvw278755fjbwzk26xw";
+      gridSha = "03lfr9gq6bwl88ihw1g85fs0qj30dn6ncxd20d1phxadrgwin7c5";
+    };
   };
 
   driver = versions."${cfg.version}";
@@ -107,7 +116,7 @@ in {
 
       version = mkOption {
         type = types.str;
-        default = "v17.1";
+        default = "v17.3";
         description = "version";
       };
     };
@@ -134,7 +143,7 @@ in {
 
         patches =
           patches
-          ++ ["${gpuPatches}/${driver.vgpuVersion}.patch"]
+          # ++ ["${gpuPatches}/${driver.vgpuVersion}.patch"]
           #          ++ [
           #            ./nvidia-vgpu-merge.patch
           #          ]
