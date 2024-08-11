@@ -34,8 +34,8 @@ with lib; let
       gridVersion = "550.90.07";
       guestVersion = "552.74";
 
-      vgpuSha = "17fanpgxf464qvra8bf6m9vkyn7iw0zx4yvw278755fjbwzk26xw";
-      gridSha = "03lfr9gq6bwl88ihw1g85fs0qj30dn6ncxd20d1phxadrgwin7c5";
+      vgpuSha = "15lan696khkbs8y5v04kd8p82mlv4fjg23sx9ciba36lkwk36x3h";
+      gridSha = "1xkjxmscx13cxvnm8v4319y4k3gdnnjyayrvvv4dakc444xplcz3";
     };
   };
 
@@ -142,7 +142,7 @@ in {
         # NV_KVM_MIGRATION_UAPI = 1;
 
         patches =
-          patches
+          []
           # ++ ["${gpuPatches}/${driver.vgpuVersion}.patch"]
           #          ++ [
           #            ./nvidia-vgpu-merge.patch
