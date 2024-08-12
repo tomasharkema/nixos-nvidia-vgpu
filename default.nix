@@ -142,20 +142,18 @@ in {
         # NV_KVM_MIGRATION_UAPI = 1;
 
         patches =
-          []
-          # ++ ["${gpuPatches}/${driver.vgpuVersion}.patch"]
-          #          ++ [
-          #            ./nvidia-vgpu-merge.patch
-          #          ]
-          #          ++ (lib.optional cfg.unlock.enable
-          #            (pkgs.substituteAll {
-          #              src = ./nvidia-vgpu-unlock.patch;
-          #              vgpu_unlock = vgpu_unlock.src;
-          #            }));
-          ;
+          patches
+          ++ [
+            (pkgs.substituteAll {
+              src = ./6.10.patch;
+              vgpu_unlock = vgpu_unlock.src;
+            })
+            "${gpuPatches}/${driver.vgpuVersion}.patch"
+            # ./nvidia-vgpu-merge.patch
+          ];
+
         postUnpack = ''
           ${postUnpack}
-
 
           # More merging, besides patch above
 
@@ -168,7 +166,6 @@ in {
 
           cp ${nvidia-vgpu-kvm-src}/kernel/common/inc/nv-vgpu-vfio-interface.h $sourceRoot/kernel/common/inc/nv-vgpu-vfio-interface.h
           cp ${nvidia-vgpu-kvm-src}/kernel/nvidia/nv-vgpu-vfio-interface.c $sourceRoot/kernel/nvidia/nv-vgpu-vfio-interface.c
-          echo "NVIDIA_SOURCES += nvidia/nv-vgpu-vfio-interface.c" >> $sourceRoot/kernel/nvidia/nvidia-sources.Kbuild
           cp -r ${nvidia-vgpu-kvm-src}/kernel/nvidia-vgpu-vfio $sourceRoot/kernel/nvidia-vgpu-vfio
 
           cp ${nvidia-vgpu-kvm-src}/libnvidia-vgpu.so.${driver.vgpuVersion} $sourceRoot
@@ -178,15 +175,12 @@ in {
           cp ${nvidia-vgpu-kvm-src}/vgpuConfig.xml $sourceRoot
           cp ${nvidia-vgpu-kvm-src}/sriov-manage $sourceRoot
 
-          echo 'ldflags-y += -T ${vgpu_unlock.src}/kern.ld' >> $sourceRoot/kernel/nvidia/nvidia.Kbuild
-          substituteInPlace $sourceRoot/kernel/nvidia/os-interface.c \
-            --replace-fail "#include \"nv-time.h\"" $'#include "nv-time.h"\n#include "${vgpu_unlock.src}/vgpu_unlock_hooks.c"'
-
           chmod -R u+rw .
         '';
-        # ${postPatch}
+
+        #  ${optionalString (postPatch ? "") postPatch}
+
         postPatch = ''
-          ${optionalString (postPatch ? "") postPatch}
 
           # Move path for vgpuConfig.xml into /etc
           sed -i 's|/usr/share/nvidia/vgpu|/etc/nvidia-vgpu-xxxxx|' ./nvidia-vgpud
@@ -199,19 +193,22 @@ in {
         # HACK: Using preFixup instead of postInstall since nvidia-x11 builder.sh doesn't support hooks
         preFixup = ''
           ${preFixup}
-          for i in libnvidia-vgpu.so.${driver.vgpuVersion} libnvidia-vgxcfg.so.${driver.vgpuVersion}; do
+
+          for i in "libnvidia-vgpu.so.${driver.vgpuVersion}" "libnvidia-vgxcfg.so.${driver.vgpuVersion}"; do
             install -Dm755 "$i" "$out/lib/$i"
           done
-          patchelf --set-rpath ${pkgs.stdenv.cc.cc.lib}/lib $out/lib/libnvidia-vgpu.so.${driver.vgpuVersion}
-          install -Dm644 vgpuConfig.xml $out/vgpuConfig.xml
+
+          patchelf --set-rpath "${pkgs.stdenv.cc.cc.lib}/lib" "$out/lib/libnvidia-vgpu.so.${driver.vgpuVersion}"
+
+          install -Dm644 vgpuConfig.xml "$out/vgpuConfig.xml"
 
           for i in nvidia-vgpud nvidia-vgpu-mgr; do
             install -Dm755 "$i" "$bin/bin/$i"
             # stdenv.cc.cc.lib is for libstdc++.so needed by nvidia-vgpud
             patchelf --interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" \
-              --set-rpath $out/lib "$bin/bin/$i"
+              --set-rpath "$out/lib" "$bin/bin/$i"
           done
-          install -Dm755 sriov-manage $bin/bin/sriov-manage
+          install -Dm755 sriov-manage "$bin/bin/sriov-manage"
         '';
       }
     );
