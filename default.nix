@@ -7,7 +7,7 @@ let
   # grid driver and wdys driver aren't actually used, but their versions are needed to find some filenames
   vgpu-driver-version = cfg.useMyDriver.vgpu-driver-version; #"550.90.07";
   grid-driver-version = "550.90.05";
-  wdys-driver-version = "552.55";
+  wdys-driver-version = "552.74";
   grid-version = "17.3";
   kernel-at-least-6 = lib.strings.versionAtLeast config.boot.kernelPackages.kernel.version "6.0";
 in
