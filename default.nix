@@ -228,7 +228,11 @@ in {
           name = "NVIDIA-Linux-x86_64-${vgpu-driver-version}-merged-vgpu-kvm-patched-${config.boot.kernelPackages.kernel.version}";
           version = "${vgpu-driver-version}";
 
-          patches = patches ++ [./6.10.patch];
+          patches =
+            /*
+            patches ++
+            */
+            [./6.10.patch];
 
           # the new driver (compiled in a derivation above)
           src =
