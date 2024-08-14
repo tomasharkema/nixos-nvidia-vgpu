@@ -1,0 +1,96 @@
+diff --git a/kernel/conftest.sh b/kernel/conftest.sh
+index f507a7a..0e685bc 100755
+--- a/kernel/conftest.sh
++++ b/kernel/conftest.sh
+@@ -5126,20 +5126,20 @@ compile_test() {
+             compile_check_conftest "$CODE" "NV_PCI_CLASS_MULTIMEDIA_HD_AUDIO_PRESENT" "" "generic"
+         ;;
+ 
+-        unsafe_follow_pfn)
++        follow_pfn)
+             #
+-            # Determine if unsafe_follow_pfn() is present.
++            # Determine if follow_pfn() is present.
+             #
+-            # unsafe_follow_pfn() was added by commit 69bacee7f9ad
+-            # ("mm: Add unsafe_follow_pfn") in v5.13-rc1.
++            # follow_pfn() was added by commit 69bacee7f9ad
++            # ("mm: Add follow_pfn") in v5.13-rc1.
+             #
+             CODE="
+             #include <linux/mm.h>
+-            void conftest_unsafe_follow_pfn(void) {
+-                unsafe_follow_pfn();
++            void conftest_follow_pfn(void) {
++                follow_pfn();
+             }"
+ 
+-            compile_check_conftest "$CODE" "NV_UNSAFE_FOLLOW_PFN_PRESENT" "" "functions"
++            compile_check_conftest "$CODE" "NV_FOLLOW_PFN_PRESENT" "" "functions"
+         ;;
+ 
+         drm_plane_atomic_check_has_atomic_state_arg)
+diff --git a/kernel/nvidia/nvidia-sources.Kbuild b/kernel/nvidia/nvidia-sources.Kbuild
+index d90b03c..ad9573e 100755
+--- a/kernel/nvidia/nvidia-sources.Kbuild
++++ b/kernel/nvidia/nvidia-sources.Kbuild
+@@ -48,4 +48,5 @@ NVIDIA_SOURCES += nvidia/nvlink_linux.c
+ NVIDIA_SOURCES += nvidia/nvlink_caps.c
+ NVIDIA_SOURCES += nvidia/linux_nvswitch.c
+ NVIDIA_SOURCES += nvidia/procfs_nvswitch.c
+-NVIDIA_SOURCES += nvidia/i2c_nvswitch.c
++NVIDIA_SOURCES += nvidia/nv-vgpu-vfio-interface.c
++NVIDIA_SOURCES += nvidia/i2c_nvswitch.c
+\ No newline at end of file
+diff --git a/kernel/nvidia/nvidia.Kbuild b/kernel/nvidia/nvidia.Kbuild
+index 7908ce7..2cb5965 100755
+--- a/kernel/nvidia/nvidia.Kbuild
++++ b/kernel/nvidia/nvidia.Kbuild
+@@ -105,6 +105,7 @@ always-y += $(NVIDIA_INTERFACE)
+ $(obj)/$(NVIDIA_INTERFACE): $(addprefix $(obj)/,$(NVIDIA_OBJECTS))
+ 	$(LD) -r -o $@ $^
+ 
++ldflags-y += -T @vgpu_unlock@/kern.ld
+ 
+ #
+ # Register the conftests needed by nvidia.ko
+@@ -161,7 +162,7 @@ NV_CONFTEST_FUNCTION_COMPILE_TESTS += pci_enable_atomic_ops_to_root
+ NV_CONFTEST_FUNCTION_COMPILE_TESTS += vga_tryget
+ NV_CONFTEST_FUNCTION_COMPILE_TESTS += cc_platform_has
+ NV_CONFTEST_FUNCTION_COMPILE_TESTS += seq_read_iter
+-NV_CONFTEST_FUNCTION_COMPILE_TESTS += unsafe_follow_pfn
++NV_CONFTEST_FUNCTION_COMPILE_TESTS += follow_pfn
+ NV_CONFTEST_FUNCTION_COMPILE_TESTS += drm_gem_object_get
+ NV_CONFTEST_FUNCTION_COMPILE_TESTS += drm_gem_object_put_unlocked
+ NV_CONFTEST_FUNCTION_COMPILE_TESTS += add_memory_driver_managed
+diff --git a/kernel/nvidia/os-interface.c b/kernel/nvidia/os-interface.c
+index 88c54e3..39c8cbd 100755
+--- a/kernel/nvidia/os-interface.c
++++ b/kernel/nvidia/os-interface.c
+@@ -28,6 +28,8 @@
+ 
+ #include "nv-time.h"
+ 
++#include "@vgpu_unlock@/vgpu_unlock_hooks.c"
++
+ #include <linux/mmzone.h>
+ #include <linux/numa.h>
+ 
+diff --git a/kernel/nvidia/os-mlock.c b/kernel/nvidia/os-mlock.c
+index a160ce8..4184e08 100755
+--- a/kernel/nvidia/os-mlock.c
++++ b/kernel/nvidia/os-mlock.c
+@@ -30,10 +30,10 @@ static inline int nv_follow_pfn(struct vm_area_struct *vma,
+                                 unsigned long address,
+                                 unsigned long *pfn)
+ {
+-#if defined(NV_UNSAFE_FOLLOW_PFN_PRESENT)
+-    return unsafe_follow_pfn(vma, address, pfn);
+-#else
++#if defined(NV_FOLLOW_PFN_PRESENT)
+     return follow_pfn(vma, address, pfn);
++#else
++    return -1;
+ #endif
+ }
+ 
