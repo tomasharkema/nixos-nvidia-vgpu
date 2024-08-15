@@ -230,9 +230,10 @@ in {
 
           patches =
             patches
-            ++ [
-              ./6.10.patch
-            ];
+            # ++ [
+            #   ./6.10.patch
+            # ]
+            ;
 
           # the new driver (compiled in a derivation above)
           src =
@@ -251,6 +252,11 @@ in {
                 #
                 sha256 = cfg.useMyDriver.sha256;
               };
+
+          # prePatch = ''
+          #   ls -la
+          #   sleep 1000
+          # '';
 
           postPatch =
             if postPatch != null
