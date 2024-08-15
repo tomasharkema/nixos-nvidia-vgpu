@@ -229,8 +229,10 @@ in {
           version = "${vgpu-driver-version}";
 
           patches =
-            patches;
-          #++ [./6.10.patch];
+            patches
+            ++ [
+              ./6.10.patch
+            ];
 
           # the new driver (compiled in a derivation above)
           src =
