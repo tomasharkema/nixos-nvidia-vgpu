@@ -39,7 +39,7 @@ in let
       // args);
 
   compiled-driver = pkgs.stdenv.mkDerivation {
-    name = "NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched";
+    name = "NVIDIA-Linux-x86_64-${vgpu-driver-version}-merged-vgpu-kvm-patched";
 
     nativeBuildInputs = [pkgs.p7zip pkgs.unzip pkgs.coreutils pkgs.bash pkgs.zstd];
 
@@ -49,16 +49,16 @@ in let
       owner = "VGPU-Community-Drivers";
       repo = "vGPU-Unlock-patcher";
       # 535.129
-      rev = "3765eee908858d069e7b31842f3486095b0846b5";
-      hash = "sha256-PR61ylYgTaWQ/xxMDR8ZUUA5vQNUcZvIt/hqgpAQeNM=";
+      rev = "59c75f98baf4261cf42922ba2af5d413f56f0621";
+      hash = "";
       fetchSubmodules = true;
       deepClone = true;
     };
-    # original_driver_src = pkgs.fetchurl {
-    #   # Hosted by nvidia
-    #   url = "https://download.nvidia.com/XFree86/Linux-x86_64/${driver-version}/NVIDIA-Linux-x86_64-${driver-version}.run";
-    #   sha256 = "e6dca5626a2608c6bb2a046cfcb7c1af338b9e961a7dd90ac09bb8a126ff002e";
-    # };
+    original_driver_src = pkgs.fetchurl {
+      # Hosted by nvidia
+      url = "https://download.nvidia.com/XFree86/Linux-x86_64/${driver-version}/NVIDIA-Linux-x86_64-${driver-version}.run";
+      sha256 = "";
+    };
     vgpu_driver_src = requireFile {
       name = "NVIDIA-GRID-Linux-KVM-${vgpu-driver-version}-${driver-version}-${wdys-driver-version}.zip";
       sha256 = cfg.vgpu_driver_src.sha256; # nix hash file foo.txt
@@ -76,9 +76,11 @@ in let
       ${pkgs.unzip}/bin/unzip -j NVIDIA-GRID-Linux-KVM-${vgpu-driver-version}-${driver-version}-${wdys-driver-version}.zip Host_Drivers/NVIDIA-Linux-x86_64-${vgpu-driver-version}-vgpu-kvm.run
       cp -a $src/* .
 
+      cp -a $original_driver_src NVIDIA-Linux-x86_64-${driver-version}.run
+
       sed -i '0,/^    vcfgclone \''${TARGET}\/vgpuConfig.xml /s//${lib.attrsets.foldlAttrs (s: n: v: s + "    vcfgclone \\\${TARGET}\\/vgpuConfig.xml 0x${builtins.substring 0 4 v} 0x${builtins.substring 5 4 v} 0x${builtins.substring 0 4 n} 0x${builtins.substring 5 4 n}\\n") "" cfg.copyVGPUProfiles}&/' ./patch.sh
 
-      # bash ./patch.sh ${lib.optionalString kernel-at-least-6 "--force-nvidia-gpl-I-know-it-is-wrong --enable-nvidia-gpl-for-experimenting"} --repack general-merge
+      bash ./patch.sh ${lib.optionalString kernel-at-least-6 "--force-nvidia-gpl-I-know-it-is-wrong --enable-nvidia-gpl-for-experimenting"} --repack general-merge
       cp -a NVIDIA-Linux-x86_64-${vgpu-driver-version}-merged-vgpu-kvm-patched.run $out
     '';
   };
@@ -238,13 +240,13 @@ in {
         } @ attrs: {
           # Overriding https://github.com/NixOS/nixpkgs/tree/nixos-unstable/pkgs/os-specific/linux/nvidia-x11
           # that gets called from the option hardware.nvidia.package from here: https://github.com/NixOS/nixpkgs/blob/nixos-22.11/nixos/modules/hardware/video/nvidia.nix
-          name = "NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched-${config.boot.kernelPackages.kernel.version}";
-          version = "${driver-version}";
+          name = "NVIDIA-Linux-x86_64-${vgpu-driver-version}-merged-vgpu-kvm-patched-${config.boot.kernelPackages.kernel.version}";
+          version = "${vgpu-driver-version}";
 
           # the new driver (compiled in a derivation above)
           src =
             if (!cfg.useMyDriver.enable)
-            then "${compiled-driver}/NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched.run"
+            then "${compiled-driver}/NVIDIA-Linux-x86_64-${vgpu-driver-version}-merged-vgpu-kvm-patched.run"
             else if (cfg.useMyDriver.getFromRemote != null)
             then cfg.useMyDriver.getFromRemote
             else
