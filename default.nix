@@ -9,9 +9,9 @@ inputs: {
   driver-version = cfg.useMyDriver.driver-version; # "535.129.03";
   # grid driver and wdys driver aren't actually used, but their versions are needed to find some filenames
   vgpu-driver-version = cfg.useMyDriver.vgpu-driver-version; #"535.129.03";
-  grid-driver-version = "535.129.03";
+  grid-driver-version = cfg.useMyDriver.grid-driver-version;
   wdys-driver-version = cfg.useMyDriver.wdys-driver-version; # "537.70";
-  grid-version = "16.7";
+  grid-version = "16.6";
   kernel-at-least-6 = lib.strings.versionAtLeast config.boot.kernelPackages.kernel.version "6.0";
 in let
   inherit (pkgs.stdenv.hostPlatform) system;
@@ -50,14 +50,14 @@ in let
       repo = "vGPU-Unlock-patcher";
       # 535.129
       rev = "59c75f98baf4261cf42922ba2af5d413f56f0621";
-      hash = "";
+      sha256 = "sha256-kBRhDsp/b0HjNml8IQcQcwH2wdVidExjvU0FfPyTfkQ=";
       fetchSubmodules = true;
       deepClone = true;
     };
     original_driver_src = pkgs.fetchurl {
       # Hosted by nvidia
       url = "https://download.nvidia.com/XFree86/Linux-x86_64/${driver-version}/NVIDIA-Linux-x86_64-${driver-version}.run";
-      sha256 = "";
+      sha256 = cfg.driver_src.sha256;
     };
     vgpu_driver_src = requireFile {
       name = "NVIDIA-GRID-Linux-KVM-${vgpu-driver-version}-${driver-version}-${wdys-driver-version}.zip";
@@ -114,6 +114,15 @@ in {
       };
 
       vgpu_driver_src.sha256 = mkOption {
+        default = "sha256-tFgDf7ZSIZRkvImO+9YglrLimGJMZ/fz25gjUT0TfDo=";
+        type = types.str;
+        description = ''
+          sha256 of the vgpu_driver file in case you're having trouble adding it with for Example `nix-store --add-fixed sha256 NVIDIA-GRID-Linux-KVM-535.129.03-537.70.zip`
+          You can find the hash of the file with `nix hash file foo.txt`
+        '';
+      };
+
+      driver_src.sha256 = mkOption {
         default = "sha256-tFgDf7ZSIZRkvImO+9YglrLimGJMZ/fz25gjUT0TfDo=";
         type = types.str;
         description = ''
