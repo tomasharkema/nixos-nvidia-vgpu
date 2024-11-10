@@ -416,7 +416,7 @@ in {
               if cfg.fastapi-dls.local_ipv4 == ""
               then config.networking.hostName
               else "${cfg.fastapi-dls.local_ipv4}";
-            DLS_PORT = "443";
+            DLS_PORT = "7070";
             LEASE_EXPIRE_DAYS = "90";
             DATABASE = "sqlite:////app/database/db.sqlite";
             DEBUG = "true";
@@ -424,7 +424,7 @@ in {
           extraOptions = [
           ];
           # Publish the container's port to the host
-          ports = ["443:443"];
+          ports = ["7070:7070"];
           # Do not automatically start the container, it will be managed
           autoStart = false;
         };
