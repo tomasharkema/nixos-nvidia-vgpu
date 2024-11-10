@@ -424,7 +424,7 @@ in {
           extraOptions = [
           ];
           # Publish the container's port to the host
-          ports = ["7070:7070"];
+          ports = ["7070:443"];
           # Do not automatically start the container, it will be managed
           autoStart = false;
         };
